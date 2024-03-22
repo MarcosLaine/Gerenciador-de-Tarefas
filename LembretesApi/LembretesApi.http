@@ -1,0 +1,6 @@
+@LembretesApi_HostAddress = http://localhost:5285
+
+GET {{LembretesApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

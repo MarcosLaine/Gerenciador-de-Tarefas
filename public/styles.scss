@@ -1,0 +1,66 @@
+$font-stack: 'Helvetica', sans-serif;
+$primary-color: #333;
+
+body {
+  font: 100% $font-stack;
+  color: $primary-color;
+}
+
+header {
+  background-color: #f8f8f8;
+  padding: 1em 0;
+  text-align: center;
+  h1 {
+    margin: 0;
+  }
+}
+
+#form-section {
+  margin: 2em auto;
+  width: 90%;
+  max-width: 600px;
+  .input-group {
+    margin-bottom: 1em;
+    label {
+      display: block;
+      margin-bottom: 0.5em;
+    }
+    input[type="text"],
+    input[type="date"] {
+      width: 100%;
+      padding: 0.5em;
+      border: 1px solid #ccc;
+      border-radius: 0.3em;
+    }
+    button {
+      width: 100%;
+      padding: 0.7em;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      border-radius: 0.3em;
+      cursor: pointer;
+      &:hover {
+        background-color: darken($primary-color, 10%);
+      }
+    }
+  }
+}
+
+#lembretes-section {
+  width: 90%;
+  max-width: 600px;
+  margin: 0 auto;
+  h2 {
+    border-bottom: 1px solid #ccc;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    li {
+      padding: 0.5em 0;
+      border-bottom: 1px solid #eee;
+    }
+  }
+}

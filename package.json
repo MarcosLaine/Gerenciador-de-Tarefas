@@ -1,0 +1,15 @@
+{
+  "name": "dti_digital",
+  "version": "1.0.0",
+  "description": "Projeto para sistema de lembretes.",
+  "main": "index.js",
+  "scripts": {
+    "build-css": "sass public/styles.scss public/styles.css",
+    "watch-css": "sass public/styles.scss public/styles.css --watch"
+  },
+  "author": "Marcos Laine",
+  "license": "ISC",
+  "devDependencies": {
+    "sass": "^1.72.0"
+  }
+}
