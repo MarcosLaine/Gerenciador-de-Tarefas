@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const li = document.createElement('li');
         li.textContent = `${lembrete.nome} - ${new Date(lembrete.data).toLocaleDateString()}`;
         const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'X';
+        deleteButton.textContent = 'X'//logo cria o botão para remover, que será removido pelo id do item
         deleteButton.onclick = function () {
             deletarLembrete(lembrete.id, li);
         };
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lembretesList.appendChild(li);
     }
 
-    function deletarLembrete(id, li) {
+    function deletarLembrete(id, li) {//deleta o lembrete pelo ID clicando no 'X'
         fetch(`/api/lembretes/${id}`, {
             method: 'DELETE'
         })
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => console.error('Erro ao deletar lembrete:', error));
     }
 
-    function carregarLembretes() {
+    function carregarLembretes() {//carrega os lembretes registrados anteriormente
         fetch('/api/lembretes')
             .then(response => response.json())
             .then(lembretes => {

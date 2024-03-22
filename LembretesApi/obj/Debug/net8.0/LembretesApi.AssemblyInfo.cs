@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LembretesApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+880b23abf8b116a29c76282f088212136a46687a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cf1c5f990e402ea663c4c24bc10aac39cee3682e")]
 [assembly: System.Reflection.AssemblyProductAttribute("LembretesApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LembretesApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
