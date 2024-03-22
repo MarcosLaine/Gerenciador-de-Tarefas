@@ -32,7 +32,7 @@ Criei esse reporsitório para o desafio do processo seletivo de candidatos da DT
 Para executar este projeto localmente, siga os passos abaixo:
 
 1. Clone o repositório para a sua máquina local usando:
-   `git clone <uhttps://github.com/MarcosLaine/Teste_DTI.git>`
+   `git clone <https://github.com/MarcosLaine/Teste_DTI.git>`
 
 2. Abra o diretório do projeto no terminal e navegue até a pasta onde se encontra o projeto C# (`LembretesApi`).
 
