@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
             secaoData.appendChild(listaLembretes);
 
             lembretesList.appendChild(secaoData);
-        }
+        } 
 
         const listaLembretes = secaoData.querySelector('ul');
         const itemLembrete = document.createElement('li');
