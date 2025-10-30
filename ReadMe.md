@@ -1,54 +1,290 @@
-# Sistema de Lembretes
+# 📝 Gerenciador de Tarefas
 
-Criei esse reporsitório para o desafio do processo seletivo de candidatos da DTI Digital, onde era necessário criar um sistema de lembretes com Dia, Mes e Ano, remover ao clicar no X e utilizar obrigatoriamente C# no código para fazer o back-end do projeto
+Sistema moderno e intuitivo para gerenciamento de lembretes e tarefas, desenvolvido com React, Vite, Tailwind CSS e ASP.NET Core.
 
-## Funcionalidades
+## ✨ Funcionalidades
 
-- Adicionar lembretes com nome e data
-- Visualizar lista de lembretes
-- Remover lembretes
+- ➕ **Adicionar lembretes** com nome e data
+- 📋 **Visualizar lista de lembretes** agrupados por data
+- 🗑️ **Remover lembretes** com animações suaves
+- 🎨 **Interface moderna** com glassmorphism e animações
+- 📱 **Design responsivo** para todos os dispositivos
+- 🌈 **Gradientes animados** e efeitos visuais sofisticados
+- 🎯 **Validação de datas** - não permite criar lembretes para datas passadas
+- 📅 **Formatação de datas** em português brasileiro
 
-## Tecnologias Utilizadas
+## 🚀 Tecnologias Utilizadas
 
-- Frontend: HTML, CSS (gerado através de um arquivo SCSS), JavaScript
-- Backend: ASP.NET Core Web API
-- LocalStorage
+### Frontend
+- **React 18** - Biblioteca JavaScript para construção de interfaces
+- **Vite** - Build tool extremamente rápida
+- **Tailwind CSS** - Framework CSS utilitário
+- **Lucide React** - Ícones modernos e elegantes
+- **date-fns** - Manipulação e formatação de datas
 
-## Premissas assumidas
+### Backend
+- **ASP.NET Core 8 Web API** - Framework para APIs RESTful
+- **C#** - Linguagem de programação
 
-- Como o foco do projeto era o desenvolvimente do Back-end em C#, não foquei muito na estilização do Front-end
-- Como não foi especificado a necessidade da criação de um Banco de Dados externo (como MySQL, MongoDB, etc), usei o LocalStorage da máquina para armazenar os lembretes do usuário
-- O usuário pode ter vários lembretes armazenados no navegador do usuário, entretanto, por motivos claros, nenhum lembrete pode ser adicionado para uma data anterior à data atual
+## 📋 Pré-requisitos
 
-# Decisões do Projeto
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Node.js](https://nodejs.org/) (versão 18 ou superior)
+- [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/)
 
-- Decidi que usaria o framework ASP.NET Core para a criação da API RESTful, o que me permitiria uma maior compatibilidade com o armazenamento de dados no dispositivo
-- Decidi que usaria C# como linguagem principal para o Back-end, assim como pedido
-- Decidi que para o Front-end, usaria a estrutura básica (HTML, CSS e JavaScript), mas utilizando SCSS como foi proposto inicialmente
+## 🛠️ Instalação e Execução
 
-# Intruções de Execução
+### Opção 1: Setup Automatizado (Recomendado)
 
+**Windows:**
+```bash
+setup.bat
+```
 
-Para executar este projeto localmente, siga os passos abaixo:
+**Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
 
-1. Clone o repositório para a sua máquina local usando:
-   `git clone <https://github.com/MarcosLaine/Teste_DTI.git>`
+### Opção 2: Setup Manual
 
-2. Abra o diretório do projeto no terminal e navegue até a pasta onde se encontra o projeto C# (`LembretesApi`).
+#### 1. Clone o repositório
 
-3. Você também precisará compilar o SCSS para CSS antes de carregar a aplicação pela primeira vez. Para isso, volte ao diretório raiz do projeto e execute:
-    `npm install` e `npm run build-css`
-    Isso vai compilar seu arquivo SCSS em um arquivo CSS utilizável.
+```bash
+git clone <https://github.com/marcoslaine/gerenciador-de-tarefas.git>
+cd Gerenciador-de-Tarefas
+```
 
-4. Dentro dessa pasta, execute o seguinte comando para restaurar as dependências do projeto e compilar o código:
-   `dotnet restore` e `dotnet build`
+#### 2. Configure e inicie o Backend (API)
 
-5. Depois disso, você pode iniciar o servidor com o comando:
-    `dotnet run`
-    Isso iniciará o servidor em `http://localhost:5285` por padrão, ou em uma porta diferente se você configurou de outra forma.
-6. Para acessar a aplicação, abra seu navegador e digite o endereço `http://localhost:5285`.
+```bash
+cd LembretesApi
+dotnet restore
+dotnet build
+dotnet run
+```
 
+A API estará rodando em `http://localhost:5285`
 
-7. Com o servidor em execução e o SCSS compilado, recarregue sua página no navegador. Com isso, a aplicacão deverá funcionar corretamente.
-    
- 
+#### 3. Configure e inicie o Frontend React
+
+Em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+O frontend estará disponível em `http://localhost:3000`
+
+#### 4. Acesse a aplicação
+
+Abra seu navegador e acesse: **http://localhost:3000**
+
+## 📁 Estrutura do Projeto
+
+```
+Gerenciador-de-Tarefas/
+├── frontend/                    # Aplicação React
+│   ├── src/
+│   │   ├── components/         # Componentes React
+│   │   │   ├── ReminderForm.jsx
+│   │   │   ├── ReminderList.jsx
+│   │   │   └── ReminderItem.jsx
+│   │   ├── services/           # Serviços de API
+│   │   │   └── api.js
+│   │   ├── App.jsx             # Componente principal
+│   │   ├── main.jsx            # Entry point
+│   │   └── index.css           # Estilos Tailwind
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── package.json
+│
+├── LembretesApi/               # Backend ASP.NET Core
+│   ├── Controllers/
+│   │   └── LembretesController.cs
+│   ├── Models/
+│   │   └── Lembrete.cs
+│   ├── Program.cs
+│   ├── appsettings.json
+│   └── LembretesApi.csproj
+│
+├── setup.bat                   # Script de setup Windows
+├── setup.sh                    # Script de setup Linux/Mac
+├── .gitignore
+└── README.md
+```
+
+## 🎨 Design Features
+
+### Glassmorphism
+Interface com efeito de vidro fosco, criando uma aparência moderna e elegante com:
+- Backdrop blur
+- Transparências sutis
+- Bordas suaves
+- Sombras em camadas
+
+### Animações Suaves
+- **Fade in/out** - Entrada e saída suave de elementos
+- **Slide animations** - Deslizamento elegante
+- **Hover effects** - Feedback visual ao passar o mouse
+- **Loading states** - Spinners e transições durante carregamento
+
+### Gradientes Dinâmicos
+Fundo com gradientes que mudam suavemente criando uma experiência visual rica e moderna.
+
+### Responsividade Total
+Interface 100% responsiva que se adapta perfeitamente a:
+- 📱 **Mobile** (smartphones)
+- 💻 **Tablet** (iPads e tablets)
+- 🖥️ **Desktop** (monitores grandes)
+
+## 🔌 API Endpoints
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| **GET** | `/api/lembretes` | Retorna todos os lembretes |
+| **POST** | `/api/lembretes` | Cria um novo lembrete |
+| **DELETE** | `/api/lembretes/{id}` | Remove um lembrete específico |
+
+### Exemplo de Request (POST):
+```json
+{
+  "nome": "Reunião importante",
+  "data": "2024-12-25"
+}
+```
+
+### Exemplo de Response:
+```json
+{
+  "id": 1,
+  "nome": "Reunião importante",
+  "data": "2024-12-25T00:00:00"
+}
+```
+
+## 📝 Modelo de Dados
+
+```csharp
+public class Lembrete
+{
+    public int Id { get; set; }
+    public string? Nome { get; set; }
+    public DateTime Data { get; set; }
+}
+```
+
+## 🧪 Scripts Disponíveis
+
+### Frontend
+```bash
+npm run dev      # Inicia o servidor de desenvolvimento
+npm run build    # Build para produção
+npm run preview  # Preview do build de produção
+npm run lint     # Executa o linter
+```
+
+### Backend
+```bash
+dotnet run       # Inicia o servidor
+dotnet build     # Compila o projeto
+dotnet watch run # Inicia com hot reload
+dotnet test      # Executa os testes
+```
+
+## 💡 Decisões Técnicas
+
+### Por que React?
+- Componentes reutilizáveis e manuteníveis
+- Hooks modernos para gerenciamento de estado
+- Ecossistema rico e ativo
+- Performance otimizada com Virtual DOM
+
+### Por que Vite?
+- Build extremamente rápido
+- Hot Module Replacement instantâneo
+- Configuração mínima
+- Otimizações automáticas
+
+### Por que Tailwind CSS?
+- Desenvolvimento rápido com utility classes
+- Design system consistente
+- Fácil customização
+- Bundle otimizado (apenas CSS usado)
+
+### Por que ASP.NET Core?
+- Performance excepcional
+- Type-safe com C#
+- CORS configurado
+- Fácil deploy
+
+## 🐛 Troubleshooting
+
+### Erro de CORS
+Se encontrar erros de CORS no console do navegador:
+1. Verifique se o backend está rodando em `http://localhost:5285`
+2. Confirme que está acessando o frontend via `http://localhost:3000`
+3. Reinicie ambos os servidores
+
+### Porta já em uso
+**Frontend (porta 3000):**
+- Altere em `frontend/vite.config.js` → `server.port`
+
+**Backend (porta 5285):**
+- Altere em `LembretesApi/Properties/launchSettings.json`
+
+### npm install falha
+```bash
+# Limpar cache e reinstalar
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### .NET não encontrado
+Instale o .NET 8 SDK:
+- **Windows**: https://dotnet.microsoft.com/download/dotnet/8.0
+- **Mac**: `brew install --cask dotnet-sdk`
+- **Linux**: https://learn.microsoft.com/dotnet/core/install/linux
+
+## 🚀 Próximas Features (Roadmap)
+
+- [ ] 🌙 Dark mode
+- [ ] 🏷️ Categorias e tags
+- [ ] 🔔 Notificações push
+- [ ] ✏️ Edição inline
+- [ ] 🔍 Busca e filtros
+- [ ] 📤 Export/Import (JSON/CSV)
+- [ ] 🔄 Lembretes recorrentes
+- [ ] 👥 Multi-usuários
+- [ ] 🗄️ Persistência em banco de dados
+- [ ] 📊 Dashboard com estatísticas
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Sinta-se livre para usar, modificar e distribuir.
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se livre para:
+1. Fazer um fork do projeto
+2. Criar uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abrir um Pull Request
+
+## 👨‍💻 Desenvolvido com
+
+- ❤️ Paixão por código limpo
+- ☕ Muito café
+- 🎨 Atenção aos detalhes
+- 🚀 Foco em performance
+
+---
+
+**Aproveite o gerenciador de tarefas!** ✨

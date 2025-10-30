@@ -1,41 +1,74 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using LembretesApi.Data;
 using LembretesApi.Models;
-using System.Collections.Generic;
-using System.Linq;
+using System.Security.Claims;
 
 namespace LembretesApi.Controllers
 {
-    [ApiController] // Define que a classe é um controller da API
-    [Route("api/[controller]")] // Define a rota base para as requisições deste controller
-    public class LembretesController : ControllerBase // Herda de ControllerBase para funcionalidades básicas de um controller
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize] // Requer autenticação para todos os endpoints
+    public class LembretesController : ControllerBase
     {
-        private static List<Lembrete> lembretes = new List<Lembrete>(); // Lista estática para armazenar os lembretes
-        private static int nextId = 1; // Variável estática para gerar o próximo ID
+        private readonly AppDbContext _context;
 
-        [HttpGet] // Define que este método responde a requisições HTTP GET
-        public ActionResult<IEnumerable<Lembrete>> Get() // Retorna todos os lembretes
+        public LembretesController(AppDbContext context)
         {
-            return lembretes; // Retorna a lista de lembretes
+            _context = context;
         }
 
-        [HttpPost] // Define que este método responde a requisições HTTP POST
-        public ActionResult<Lembrete> Create(Lembrete lembrete) // Cria um novo lembrete
+        private string ObterUsuarioId()
         {
-            lembrete.Id = nextId++; // Define o ID do lembrete como o próximo ID disponível e incrementa o próximo ID
-            lembretes.Add(lembrete); // Adiciona o lembrete à lista de lembretes
-            return CreatedAtAction(nameof(Create), new { id = lembrete.Id }, lembrete); // Retorna um código 201 (Created) com o lembrete criado
+            return User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                ?? throw new UnauthorizedAccessException("Usuário não autenticado");
         }
 
-        [HttpDelete("{id}")] // Define que este método responde a requisições HTTP DELETE com um parâmetro ID na rota
-        public IActionResult Delete(int id) // Deleta um lembrete pelo ID
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Lembrete>>> Get()
         {
-            var lembrete = lembretes.FirstOrDefault(x => x.Id == id); // Busca o lembrete na lista pelo ID
+            var usuarioId = ObterUsuarioId();
+            
+            var lembretes = await _context.Lembretes
+                .Where(l => l.UsuarioId == usuarioId)
+                .OrderBy(l => l.Data)
+                .ToListAsync();
+
+            return Ok(lembretes);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<Lembrete>> Create(Lembrete lembrete)
+        {
+            var usuarioId = ObterUsuarioId();
+            
+            lembrete.UsuarioId = usuarioId;
+            lembrete.DataCriacao = DateTime.UtcNow;
+
+            _context.Lembretes.Add(lembrete);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Get), new { id = lembrete.Id }, lembrete);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var usuarioId = ObterUsuarioId();
+            
+            var lembrete = await _context.Lembretes
+                .FirstOrDefaultAsync(l => l.Id == id && l.UsuarioId == usuarioId);
+
             if (lembrete == null)
             {
-                return NotFound(); // Retorna 404 (Not Found) se o lembrete não for encontrado
+                return NotFound(new { message = "Lembrete não encontrado" });
             }
-            lembretes.Remove(lembrete); // Remove o lembrete da lista
-            return NoContent(); // Retorna 204 (No Content) indicando que a operação foi bem-sucedida
+
+            _context.Lembretes.Remove(lembrete);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

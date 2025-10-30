@@ -1,58 +1,155 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
-using System.IO;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using LembretesApi.Data;
+using LembretesApi.Models;
+using LembretesApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adiciona serviços necessários para suportar controllers na aplicação
+// Configurar PostgreSQL
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+// Se vier do Render (formato postgres://...)
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+{
+    try
+    {
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    }
+    catch (Exception ex)
+    {
+        var logger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Program");
+        logger.LogWarning(ex, "Erro ao processar connection string, usando original");
+    }
+}
+
+// Configurar DB Context com PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// Configurar Identity
+builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 6;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+// Configurar JWT
+var jwtKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("JWT_KEY") ?? "ChaveSecretaSuperSeguraParaDesenvolvimento123!@#";
+var key = Encoding.ASCII.GetBytes(jwtKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+// Registrar serviços
+builder.Services.AddScoped<TokenService>();
+
+// Adiciona controllers
 builder.Services.AddControllers();
+
+// Swagger com autenticação
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
 
 var app = builder.Build();
 
-// Configura o pipeline de requisições HTTP
+// Migração automática do banco de dados
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Erro ao aplicar migrações do banco de dados");
+    }
+}
+
+// Configure o pipeline HTTP
 if (app.Environment.IsDevelopment())
 {
-    // Adiciona uma página de erro detalhada para ambiente de desenvolvimento
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    // Redireciona para a página de erro em caso de exceção
-    app.UseExceptionHandler("/Error");
-    // Habilita o HTTP Strict Transport Security (HSTS) para melhorar a segurança
-    app.UseHsts();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-// Redireciona requisições HTTP para HTTPS
-app.UseHttpsRedirection();
+// CORS deve vir antes de Authentication e Authorization
+app.UseCors("AllowAll");
 
-// Configura o uso de arquivos padrão (como index.html) para requisições para diretórios
-app.UseDefaultFiles(new DefaultFilesOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "../public")),
-    RequestPath = new Microsoft.AspNetCore.Http.PathString("")
-});
-
-// Configura o uso de arquivos estáticos (CSS, JavaScript, etc.)
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "../public")),
-    RequestPath = ""
-});
-
-// Habilita o roteamento de requisições
-app.UseRouting();
-
-// Habilita a autorização de requisições
+app.UseAuthentication();
 app.UseAuthorization();
 
-// Mapeia os controllers para que sejam acessíveis pelas requisições HTTP
 app.MapControllers();
 
-// Executa a aplicação web
 app.Run();
