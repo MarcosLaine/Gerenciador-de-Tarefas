@@ -67,17 +67,8 @@ namespace LembretesApi.Controllers
             {
                 var usuarioId = ObterUsuarioId();
                 
-                // Criar objeto Lembrete
-                var lembrete = new Lembrete
-                {
-                    Nome = dto.Nome,
-                    Descricao = dto.Descricao,
-                    Data = dto.Data,
-                    UsuarioId = usuarioId,
-                    DataCriacao = DateTime.UtcNow
-                };
-                
                 // Converter horário de string para TimeSpan se fornecido
+                TimeSpan? horarioTimeSpan = null;
                 if (!string.IsNullOrEmpty(dto.Horario))
                 {
                     // Aceita formatos HH:mm ou HH:mm:ss
@@ -96,7 +87,7 @@ namespace LembretesApi.Controllers
                     
                     if (TimeSpan.TryParse(horarioStr, out var timeSpan))
                     {
-                        lembrete.Horario = timeSpan;
+                        horarioTimeSpan = timeSpan;
                     }
                     else
                     {
@@ -104,33 +95,53 @@ namespace LembretesApi.Controllers
                     }
                 }
                 
-                // Tratar data corretamente para evitar problemas de timezone
-                // Se a data tem apenas data (sem hora específica), tratar como data local
-                if (lembrete.Data.Kind == DateTimeKind.Unspecified)
+                // Processar data: extrair apenas a parte da data (sem hora) e aplicar o horário se existir
+                var dataBase = dto.Data.Date; // Pega apenas a data (sem hora)
+                DateTime dataProcessada;
+                
+                // Se tem horário, combina data + horário
+                if (horarioTimeSpan.HasValue)
                 {
-                    // Se a hora é 00:00:00, provavelmente é apenas uma data, então usar meio-dia local
-                    if (lembrete.Data.Hour == 0 && lembrete.Data.Minute == 0 && lembrete.Data.Second == 0)
-                    {
-                        // Criar nova data com a mesma data mas tratando como local
-                        var localDate = new DateTime(
-                            lembrete.Data.Year,
-                            lembrete.Data.Month,
-                            lembrete.Data.Day,
-                            12, 0, 0, // Usar meio-dia para evitar problemas de timezone
-                            DateTimeKind.Local
-                        );
-                        lembrete.Data = localDate.ToUniversalTime();
-                    }
-                    else
-                    {
-                        // Se tem horário, tratar como UTC
-                        lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
-                    }
+                    // Combinar data com horário especificado
+                    var dataComHorario = dataBase.Add(horarioTimeSpan.Value);
+                    
+                    // Tratar como local e converter para UTC
+                    var localDate = new DateTime(
+                        dataComHorario.Year,
+                        dataComHorario.Month,
+                        dataComHorario.Day,
+                        dataComHorario.Hour,
+                        dataComHorario.Minute,
+                        dataComHorario.Second,
+                        DateTimeKind.Local
+                    );
+                    
+                    dataProcessada = localDate.ToUniversalTime();
                 }
-                else if (lembrete.Data.Kind == DateTimeKind.Local)
+                else
                 {
-                    lembrete.Data = lembrete.Data.ToUniversalTime();
+                    // Sem horário: usar meio-dia local para evitar problemas de timezone
+                    var localDate = new DateTime(
+                        dataBase.Year,
+                        dataBase.Month,
+                        dataBase.Day,
+                        12, 0, 0, // Meio-dia local
+                        DateTimeKind.Local
+                    );
+                    
+                    dataProcessada = localDate.ToUniversalTime();
                 }
+                
+                // Criar objeto Lembrete
+                var lembrete = new Lembrete
+                {
+                    Nome = dto.Nome,
+                    Descricao = dto.Descricao,
+                    Data = dataProcessada,
+                    Horario = horarioTimeSpan,
+                    UsuarioId = usuarioId,
+                    DataCriacao = DateTime.UtcNow
+                };
 
                 _context.Lembretes.Add(lembrete);
                 await _context.SaveChangesAsync();
@@ -173,12 +184,8 @@ namespace LembretesApi.Controllers
                     return NotFound(new { message = "Lembrete não encontrado" });
                 }
 
-                // Atualizar campos
-                lembrete.Nome = dto.Nome;
-                lembrete.Descricao = dto.Descricao;
-                lembrete.Data = dto.Data;
-
-                // Converter horário de string para TimeSpan se fornecido
+                // Converter horário de string para TimeSpan se fornecido (mesmo processo do Create)
+                TimeSpan? horarioTimeSpanUpdate = null;
                 if (!string.IsNullOrEmpty(dto.Horario))
                 {
                     var horarioStr = dto.Horario;
@@ -195,41 +202,49 @@ namespace LembretesApi.Controllers
                     
                     if (TimeSpan.TryParse(horarioStr, out var timeSpan))
                     {
-                        lembrete.Horario = timeSpan;
+                        horarioTimeSpanUpdate = timeSpan;
                     }
                     else
                     {
                         return BadRequest(new { message = "Formato de horário inválido. Use o formato HH:mm" });
                     }
                 }
+
+                // Processar data: extrair apenas a parte da data e aplicar o horário se existir (mesmo do Create)
+                var dataBaseUpdate = dto.Data.Date;
+                DateTime dataProcessadaUpdate;
+                
+                if (horarioTimeSpanUpdate.HasValue)
+                {
+                    var dataComHorario = dataBaseUpdate.Add(horarioTimeSpanUpdate.Value);
+                    var localDate = new DateTime(
+                        dataComHorario.Year,
+                        dataComHorario.Month,
+                        dataComHorario.Day,
+                        dataComHorario.Hour,
+                        dataComHorario.Minute,
+                        dataComHorario.Second,
+                        DateTimeKind.Local
+                    );
+                    dataProcessadaUpdate = localDate.ToUniversalTime();
+                }
                 else
                 {
-                    lembrete.Horario = null;
+                    var localDate = new DateTime(
+                        dataBaseUpdate.Year,
+                        dataBaseUpdate.Month,
+                        dataBaseUpdate.Day,
+                        12, 0, 0,
+                        DateTimeKind.Local
+                    );
+                    dataProcessadaUpdate = localDate.ToUniversalTime();
                 }
 
-                // Tratar data corretamente para evitar problemas de timezone (mesmo tratamento do Create)
-                if (lembrete.Data.Kind == DateTimeKind.Unspecified)
-                {
-                    if (lembrete.Data.Hour == 0 && lembrete.Data.Minute == 0 && lembrete.Data.Second == 0)
-                    {
-                        var localDate = new DateTime(
-                            lembrete.Data.Year,
-                            lembrete.Data.Month,
-                            lembrete.Data.Day,
-                            12, 0, 0,
-                            DateTimeKind.Local
-                        );
-                        lembrete.Data = localDate.ToUniversalTime();
-                    }
-                    else
-                    {
-                        lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
-                    }
-                }
-                else if (lembrete.Data.Kind == DateTimeKind.Local)
-                {
-                    lembrete.Data = lembrete.Data.ToUniversalTime();
-                }
+                // Atualizar campos
+                lembrete.Nome = dto.Nome;
+                lembrete.Descricao = dto.Descricao;
+                lembrete.Data = dataProcessadaUpdate;
+                lembrete.Horario = horarioTimeSpanUpdate;
 
                 await _context.SaveChangesAsync();
 

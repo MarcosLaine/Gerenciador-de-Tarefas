@@ -127,10 +127,30 @@ export function filterReminders(reminders, searchTerm, filterType) {
     case 'overdue':
       filtered = filtered.filter(reminder => {
         try {
+          // Obter data base
           const reminderDate = typeof reminder.data === 'string' 
             ? parseISO(reminder.data) 
             : new Date(reminder.data)
-          return isPast(reminderDate) && !reminder.concluido
+          
+          // Se tiver horário, combinar com a data
+          let dataCompleta = reminderDate
+          if (reminder.horario) {
+            // Extrair apenas a parte da data (sem hora)
+            const year = reminderDate.getUTCFullYear()
+            const month = reminderDate.getUTCMonth()
+            const day = reminderDate.getUTCDate()
+            
+            // Parse do horário
+            const horarioStr = typeof reminder.horario === 'string' 
+              ? reminder.horario 
+              : reminder.horario.toString()
+            const [hours, minutes] = horarioStr.split(':').map(Number)
+            
+            // Criar data completa com data + horário no timezone local
+            dataCompleta = new Date(year, month, day, hours || 0, minutes || 0, 0)
+          }
+          
+          return isPast(dataCompleta) && !reminder.concluido
         } catch {
           return false
         }
