@@ -25,9 +25,9 @@ if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("pos
         var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
         
         // Usar porta padrão 5432 se não especificada na URL
-        var port = uri.Port == -1 ? 5432 : uri.Port;
+        var dbPort = uri.Port == -1 ? 5432 : uri.Port;
         
-        connectionString = $"Host={uri.Host};Port={port};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        connectionString = $"Host={uri.Host};Port={dbPort};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};SSL Mode=Require;Trust Server Certificate=true";
     }
     catch (Exception ex)
     {
