@@ -91,8 +91,11 @@ namespace LembretesApi.Controllers
                 var tables = new List<string>();
                 try
                 {
-                    using var connection = _context.Database.GetDbConnection();
-                    await connection.OpenAsync();
+                    var connection = _context.Database.GetDbConnection();
+                    if (connection.State != System.Data.ConnectionState.Open)
+                    {
+                        await connection.OpenAsync();
+                    }
                     
                     using var command = connection.CreateCommand();
                     command.CommandText = @"
@@ -106,6 +109,12 @@ namespace LembretesApi.Controllers
                     while (await reader.ReadAsync())
                     {
                         tables.Add(reader.GetString(0));
+                    }
+                    
+                    // Fecha a conexão explicitamente antes de tentar outras operações
+                    if (connection.State == System.Data.ConnectionState.Open)
+                    {
+                        await connection.CloseAsync();
                     }
                 }
                 catch (Exception ex)
@@ -123,10 +132,13 @@ namespace LembretesApi.Controllers
                 var lembretesExists = tables.Contains("Lembretes");
 
                 // Tenta fazer uma query REAL na tabela AspNetUsers
+                // ExecuteSqlRawAsync já gerencia conexões automaticamente
                 var canQueryAspNetUsers = false;
                 string queryError = null;
+                
                 try
                 {
+                    // ExecuteSqlRawAsync gerencia a conexão automaticamente
                     var count = await _context.Database.ExecuteSqlRawAsync(
                         "SELECT COUNT(*) FROM \"AspNetUsers\""
                     );
