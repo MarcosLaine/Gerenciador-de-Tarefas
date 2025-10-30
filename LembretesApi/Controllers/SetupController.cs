@@ -171,20 +171,53 @@ namespace LembretesApi.Controllers
             {
                 _logger.LogInformation("=== FORÇANDO RECRIAÇÃO DO BANCO ===");
 
-                // Primeiro tenta deletar o banco
+                // Não podemos deletar o banco em serviços gerenciados, então deletamos apenas as tabelas
                 try
                 {
-                    _logger.LogInformation("Tentando deletar banco existente...");
-                    await _context.Database.EnsureDeletedAsync();
-                    _logger.LogInformation("✅ Banco deletado.");
+                    _logger.LogInformation("Deletando tabelas existentes...");
+                    
+                    // Lista todas as tabelas do Identity e nosso modelo
+                    var tablesToDrop = new[]
+                    {
+                        "AspNetUserTokens",
+                        "AspNetUserRoles",
+                        "AspNetUserLogins",
+                        "AspNetUserClaims",
+                        "AspNetRoleClaims",
+                        "AspNetRoles",
+                        "AspNetUsers",
+                        "Lembretes",
+                        "__EFMigrationsHistory"
+                    };
+
+                    using var connection = _context.Database.GetDbConnection();
+                    await connection.OpenAsync();
+                    
+                    // Deleta cada tabela se existir
+                    foreach (var table in tablesToDrop)
+                    {
+                        try
+                        {
+                            using var command = connection.CreateCommand();
+                            command.CommandText = $"DROP TABLE IF EXISTS \"{table}\" CASCADE;";
+                            await command.ExecuteNonQueryAsync();
+                            _logger.LogInformation($"Tabela {table} deletada (se existia).");
+                        }
+                        catch (Exception tableEx)
+                        {
+                            _logger.LogWarning(tableEx, $"Não foi possível deletar tabela {table}: {tableEx.Message}");
+                        }
+                    }
+                    
+                    _logger.LogInformation("✅ Todas as tabelas foram deletadas (ou não existiam).");
                 }
                 catch (Exception delEx)
                 {
-                    _logger.LogWarning(delEx, "Não foi possível deletar banco: {Error}", delEx.Message);
+                    _logger.LogWarning(delEx, "Erro ao deletar tabelas: {Error}. Tentando criar mesmo assim...", delEx.Message);
                 }
 
                 // Cria tudo do zero
-                _logger.LogInformation("Criando banco do zero...");
+                _logger.LogInformation("Criando tabelas do zero...");
                 var created = _context.Database.EnsureCreated();
                 
                 if (created)
