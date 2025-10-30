@@ -1,9 +1,11 @@
 import { Bell, LogOut, Sparkles, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import DarkModeToggle from './components/DarkModeToggle'
 import Login from './components/Login'
 import Register from './components/Register'
 import ReminderForm from './components/ReminderForm'
 import ReminderList from './components/ReminderList'
+import { useDarkMode } from './hooks/useDarkMode'
 import { api } from './services/api'
 import { authService } from './services/authService'
 
