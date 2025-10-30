@@ -153,12 +153,26 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
+        
+        // Tenta aplicar migrations se existirem
+        try
+        {
+            context.Database.Migrate();
+        }
+        catch (Exception migrateEx)
+        {
+            // Se não houver migrations ou falhar, cria o banco automaticamente
+            // Isso cria todas as tabelas do Identity + Lembretes baseado no modelo
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(migrateEx, "Não foi possível aplicar migrations, criando banco automaticamente...");
+            context.Database.EnsureCreated();
+        }
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Erro ao aplicar migrações do banco de dados");
+        logger.LogError(ex, "Erro ao criar/aplicar migrações do banco de dados: {Error}", ex.Message);
+        // Não interrompe a aplicação, mas registra o erro
     }
 }
 
