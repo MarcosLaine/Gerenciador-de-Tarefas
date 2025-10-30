@@ -24,20 +24,8 @@ namespace LembretesApi.Controllers
             {
                 _logger.LogInformation("=== INICIANDO CRIAÇÃO DO BANCO DE DADOS VIA ENDPOINT ===");
 
-                // Tenta garantir que o banco existe
                 var canConnect = _context.Database.CanConnect();
                 _logger.LogInformation("Pode conectar ao banco: {CanConnect}", canConnect);
-
-                if (!canConnect)
-                {
-                    _logger.LogInformation("Criando banco de dados...");
-                    var created = _context.Database.EnsureCreated();
-                    if (created)
-                    {
-                        _logger.LogInformation("✅ Banco criado com sucesso!");
-                        return Ok(new { message = "Banco de dados criado com sucesso!", created = true });
-                    }
-                }
 
                 // Tenta aplicar migrations primeiro
                 try
@@ -49,10 +37,12 @@ namespace LembretesApi.Controllers
                 }
                 catch (Exception migrateEx)
                 {
-                    _logger.LogWarning(migrateEx, "Não foi possível aplicar migrations, tentando EnsureCreated...");
+                    _logger.LogWarning(migrateEx, "Não foi possível aplicar migrations: {Error}", migrateEx.Message);
                     
                     // Se não houver migrations, cria via EnsureCreated
+                    _logger.LogInformation("Tentando criar via EnsureCreated()...");
                     var created = _context.Database.EnsureCreated();
+                    
                     if (created)
                     {
                         _logger.LogInformation("✅ Banco criado via EnsureCreated!");
@@ -63,10 +53,10 @@ namespace LembretesApi.Controllers
                     }
                     else
                     {
-                        _logger.LogInformation("ℹ️ Banco já existe e tabelas já criadas");
+                        _logger.LogInformation("ℹ️ EnsureCreated retornou false - tabelas podem já existir");
                         return Ok(new { 
-                            message = "Banco de dados já existe e está pronto!", 
-                            alreadyExists = true 
+                            message = "EnsureCreated retornou false. Tabelas podem já existir. Verifique com /api/setup/check-database", 
+                            created = false 
                         });
                     }
                 }
@@ -76,7 +66,8 @@ namespace LembretesApi.Controllers
                 _logger.LogError(ex, "❌ Erro ao criar banco: {Error}", ex.Message);
                 return StatusCode(500, new { 
                     message = "Erro ao criar banco de dados", 
-                    error = ex.Message 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
                 });
             }
         }
@@ -96,35 +87,130 @@ namespace LembretesApi.Controllers
                     });
                 }
 
-                // Verifica se a tabela AspNetUsers existe
-                var tableExists = false;
+                // Lista TODAS as tabelas do banco
+                var tables = new List<string>();
                 try
                 {
-                    var result = await _context.Database.ExecuteSqlRawAsync(
-                        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AspNetUsers'"
-                    );
-                    // Se não lançar exceção, a tabela existe
-                    tableExists = true;
+                    using var connection = _context.Database.GetDbConnection();
+                    await connection.OpenAsync();
+                    
+                    using var command = connection.CreateCommand();
+                    command.CommandText = @"
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        ORDER BY table_name;
+                    ";
+                    
+                    using var reader = await command.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        tables.Add(reader.GetString(0));
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    tableExists = false;
+                    return Ok(new { 
+                        connected = true,
+                        tablesExist = false,
+                        error = ex.Message,
+                        message = $"Erro ao listar tabelas: {ex.Message}"
+                    });
+                }
+
+                var aspNetUsersExists = tables.Contains("AspNetUsers");
+                var aspNetRolesExists = tables.Contains("AspNetRoles");
+                var lembretesExists = tables.Contains("Lembretes");
+
+                // Tenta fazer uma query REAL na tabela AspNetUsers
+                var canQueryAspNetUsers = false;
+                string queryError = null;
+                try
+                {
+                    var count = await _context.Database.ExecuteSqlRawAsync(
+                        "SELECT COUNT(*) FROM \"AspNetUsers\""
+                    );
+                    canQueryAspNetUsers = true;
+                }
+                catch (Exception queryEx)
+                {
+                    canQueryAspNetUsers = false;
+                    queryError = queryEx.Message;
                 }
 
                 return Ok(new { 
                     connected = true,
-                    tablesExist = tableExists,
-                    message = tableExists ? "Banco conectado e tabelas existem!" : "Banco conectado mas tabelas não existem. Execute /api/setup/create-database"
+                    tablesExist = aspNetUsersExists && aspNetRolesExists,
+                    canQueryAspNetUsers = canQueryAspNetUsers,
+                    tables = tables,
+                    aspNetUsersExists = aspNetUsersExists,
+                    aspNetRolesExists = aspNetRolesExists,
+                    lembretesExists = lembretesExists,
+                    queryError = queryError,
+                    message = aspNetUsersExists && canQueryAspNetUsers
+                        ? "✅ Banco conectado e tabelas funcionando!" 
+                        : aspNetUsersExists && !canQueryAspNetUsers
+                        ? $"⚠️ Tabelas existem mas não é possível fazer query. Erro: {queryError}. Execute POST /api/setup/force-recreate"
+                        : "❌ Tabelas não existem. Execute POST /api/setup/create-database"
                 });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { 
                     message = "Erro ao verificar banco", 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        [HttpPost("force-recreate")]
+        public async Task<IActionResult> ForceRecreate()
+        {
+            try
+            {
+                _logger.LogInformation("=== FORÇANDO RECRIAÇÃO DO BANCO ===");
+
+                // Primeiro tenta deletar o banco
+                try
+                {
+                    _logger.LogInformation("Tentando deletar banco existente...");
+                    await _context.Database.EnsureDeletedAsync();
+                    _logger.LogInformation("✅ Banco deletado.");
+                }
+                catch (Exception delEx)
+                {
+                    _logger.LogWarning(delEx, "Não foi possível deletar banco: {Error}", delEx.Message);
+                }
+
+                // Cria tudo do zero
+                _logger.LogInformation("Criando banco do zero...");
+                var created = _context.Database.EnsureCreated();
+                
+                if (created)
+                {
+                    _logger.LogInformation("✅ Banco recriado com sucesso!");
+                    return Ok(new { 
+                        message = "Banco de dados recriado com sucesso!", 
+                        created = true 
+                    });
+                }
+                else
+                {
+                    return Ok(new { 
+                        message = "Banco não foi recriado.", 
+                        created = false 
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Erro ao recriar banco: {Error}", ex.Message);
+                return StatusCode(500, new { 
+                    message = "Erro ao recriar banco de dados", 
                     error = ex.Message 
                 });
             }
         }
     }
 }
-
