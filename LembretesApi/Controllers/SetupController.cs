@@ -190,17 +190,12 @@ namespace LembretesApi.Controllers
                         "__EFMigrationsHistory"
                     };
 
-                    using var connection = _context.Database.GetDbConnection();
-                    await connection.OpenAsync();
-                    
-                    // Deleta cada tabela se existir
+                    // Usa ExecuteSqlRawAsync direto do contexto ao invés de pegar a conexão
                     foreach (var table in tablesToDrop)
                     {
                         try
                         {
-                            using var command = connection.CreateCommand();
-                            command.CommandText = $"DROP TABLE IF EXISTS \"{table}\" CASCADE;";
-                            await command.ExecuteNonQueryAsync();
+                            await _context.Database.ExecuteSqlRawAsync($"DROP TABLE IF EXISTS \"{table}\" CASCADE;");
                             _logger.LogInformation($"Tabela {table} deletada (se existia).");
                         }
                         catch (Exception tableEx)
