@@ -41,6 +41,7 @@ namespace LembretesApi.Controllers
                         l.Id,
                         l.Nome,
                         l.Descricao,
+                        l.Categoria,
                         l.Data,
                         l.Horario,
                         l.Concluido,
@@ -137,6 +138,7 @@ namespace LembretesApi.Controllers
                 {
                     Nome = dto.Nome,
                     Descricao = dto.Descricao,
+                    Categoria = dto.Categoria,
                     Data = dataProcessada,
                     Horario = horarioTimeSpan,
                     UsuarioId = usuarioId,
@@ -152,6 +154,7 @@ namespace LembretesApi.Controllers
                     lembrete.Id,
                     lembrete.Nome,
                     lembrete.Descricao,
+                    lembrete.Categoria,
                     lembrete.Data,
                     lembrete.Horario,
                     lembrete.Concluido,
@@ -243,6 +246,7 @@ namespace LembretesApi.Controllers
                 // Atualizar campos
                 lembrete.Nome = dto.Nome;
                 lembrete.Descricao = dto.Descricao;
+                lembrete.Categoria = dto.Categoria;
                 lembrete.Data = dataProcessadaUpdate;
                 lembrete.Horario = horarioTimeSpanUpdate;
 
@@ -253,6 +257,7 @@ namespace LembretesApi.Controllers
                     lembrete.Id,
                     lembrete.Nome,
                     lembrete.Descricao,
+                    lembrete.Categoria,
                     lembrete.Data,
                     lembrete.Horario,
                     lembrete.Concluido,
@@ -293,6 +298,7 @@ namespace LembretesApi.Controllers
                     lembrete.Id,
                     lembrete.Nome,
                     lembrete.Descricao,
+                    lembrete.Categoria,
                     lembrete.Data,
                     lembrete.Horario,
                     lembrete.Concluido,
@@ -332,6 +338,7 @@ namespace LembretesApi.Controllers
                     lembrete.Id,
                     lembrete.Nome,
                     lembrete.Descricao,
+                    lembrete.Categoria,
                     lembrete.Data,
                     lembrete.Horario,
                     lembrete.Concluido,

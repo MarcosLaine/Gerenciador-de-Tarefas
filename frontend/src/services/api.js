@@ -40,7 +40,7 @@ export const api = {
   },
 
   // Criar novo lembrete
-  async createReminder(nome, data, horario = null, descricao = null) {
+  async createReminder(nome, data, horario = null, descricao = null, categoria = null) {
     try {
       // Garantir que a data seja enviada com horário no meio do dia para evitar problemas de timezone
       // Se não tiver horário, usa 12:00 para garantir que a data não mude ao converter timezones
@@ -59,6 +59,9 @@ export const api = {
       }
       if (descricao) {
         body.descricao = descricao;
+      }
+      if (categoria) {
+        body.categoria = categoria;
       }
       
       const response = await fetch(API_BASE_URL, {
@@ -99,7 +102,7 @@ export const api = {
   },
 
   // Atualizar lembrete
-  async updateReminder(id, nome, data, horario = null, descricao = null) {
+  async updateReminder(id, nome, data, horario = null, descricao = null, categoria = null) {
     try {
       // Garantir que a data seja enviada com horário no meio do dia para evitar problemas de timezone
       let dataParaEnviar = data;
@@ -119,6 +122,9 @@ export const api = {
       }
       if (descricao) {
         body.descricao = descricao;
+      }
+      if (categoria) {
+        body.categoria = categoria;
       }
       
       const response = await fetch(`${API_BASE_URL}/${id}`, {

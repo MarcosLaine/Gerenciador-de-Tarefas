@@ -1,6 +1,8 @@
 import { Bell, LogOut, Sparkles, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import DarkModeToggle from './components/DarkModeToggle'
+import Dashboard from './components/Dashboard'
+import ExportImport from './components/ExportImport'
 import Login from './components/Login'
 import Register from './components/Register'
 import ReminderForm from './components/ReminderForm'
@@ -108,16 +110,16 @@ function App() {
 
   const [editingReminder, setEditingReminder] = useState(null)
 
-  const handleAddReminder = async (nome, data, horario, descricao, id = null) => {
+  const handleAddReminder = async (nome, data, horario, descricao, categoria, id = null) => {
     try {
       if (id) {
         // Atualizar lembrete existente
-        await api.updateReminder(id, nome, data, horario, descricao)
+        await api.updateReminder(id, nome, data, horario, descricao, categoria)
         setEditingReminder(null) // Limpar modo de edição
         await loadReminders()
       } else {
         // Criar novo lembrete
-        await api.createReminder(nome, data, horario, descricao)
+        await api.createReminder(nome, data, horario, descricao, categoria)
         await loadReminders()
       }
       return true
@@ -188,6 +190,65 @@ function App() {
   useEffect(() => {
     applyFilters(allReminders, searchTerm, filter)
   }, [searchTerm, filter, allReminders])
+
+  // Importar lembretes
+  const handleImportReminders = async (importedData) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Criar cada lembrete importado
+      let successCount = 0
+      let errorCount = 0
+      
+      for (const item of importedData) {
+        try {
+          // Converter data para formato correto
+          let dataValue = item.data
+          if (typeof dataValue === 'string') {
+            // Se for string ISO completa, extrair apenas a data
+            if (dataValue.includes('T')) {
+              dataValue = dataValue.split('T')[0]
+            }
+          } else if (dataValue instanceof Date) {
+            dataValue = dataValue.toISOString().split('T')[0]
+          }
+          
+          // Converter horário
+          let horarioValue = item.horario || null
+          if (horarioValue && typeof horarioValue === 'string') {
+            horarioValue = horarioValue.substring(0, 5) // HH:mm
+          }
+          
+          await api.createReminder(
+            item.nome,
+            dataValue,
+            horarioValue,
+            item.descricao || null,
+            item.categoria || null
+          )
+          successCount++
+        } catch (err) {
+          console.error(`Erro ao importar lembrete "${item.nome}":`, err)
+          errorCount++
+        }
+      }
+      
+      // Recarregar lembretes
+      await loadReminders()
+      
+      if (errorCount > 0) {
+        setError(`${successCount} lembretes importados com sucesso, ${errorCount} falharam.`)
+      } else {
+        setError(null)
+      }
+    } catch (err) {
+      console.error('Erro ao importar lembretes:', err)
+      setError('Erro ao importar lembretes: ' + (err.message || 'Erro desconhecido'))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Se não estiver autenticado, mostrar login/registro
   if (!isAuthenticated) {
@@ -260,6 +321,23 @@ function App() {
             onCancelEdit={handleCancelEdit}
           />
         </div>
+
+        {/* Dashboard */}
+        {!loading && allReminders.length > 0 && (
+          <div className="mb-6 animate-slide-up">
+            <Dashboard reminders={allReminders} />
+          </div>
+        )}
+
+        {/* Exportar/Importar */}
+        {!loading && (
+          <div className="mb-6 animate-slide-up">
+            <ExportImport 
+              reminders={allReminders} 
+              onImportSuccess={handleImportReminders}
+            />
+          </div>
+        )}
 
         {/* Busca e Filtros */}
         <div className="mb-6 animate-slide-up">

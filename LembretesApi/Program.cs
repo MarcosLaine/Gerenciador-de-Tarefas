@@ -256,6 +256,22 @@ using (var scope = app.Services.CreateScope())
                 logger.LogInformation("✅ Coluna Concluido adicionada com sucesso!");
             }
             
+            // Verificar e adicionar Categoria
+            var checkCategoriaSql = @"
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'Lembretes' AND column_name = 'Categoria'";
+            
+            var categoriaExists = context.Database.SqlQueryRaw<string>(checkCategoriaSql).Any();
+            
+            if (!categoriaExists)
+            {
+                logger.LogWarning("⚠️ Coluna Categoria não encontrada. Criando...");
+                var addCategoriaSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Categoria"" text NULL";
+                context.Database.ExecuteSqlRaw(addCategoriaSql);
+                logger.LogInformation("✅ Coluna Categoria adicionada com sucesso!");
+            }
+            
             logger.LogInformation("✅ Todas as colunas verificadas/criadas.");
         }
         catch (Exception colEx)

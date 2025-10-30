@@ -9,6 +9,8 @@ namespace LembretesApi.DTOs
 
         public string? Descricao { get; set; } // Descrição opcional
 
+        public string? Categoria { get; set; } // Categoria opcional
+
         [Required(ErrorMessage = "Data é obrigatória")]
         public DateTime Data { get; set; }
         
@@ -21,6 +23,8 @@ namespace LembretesApi.DTOs
         public string Nome { get; set; } = string.Empty;
 
         public string? Descricao { get; set; }
+
+        public string? Categoria { get; set; }
 
         [Required(ErrorMessage = "Data é obrigatória")]
         public DateTime Data { get; set; }

@@ -1,11 +1,24 @@
-import { Calendar, Clock, FileText, Plus } from 'lucide-react'
+import { Calendar, Clock, FileText, Plus, Tag } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
+const CATEGORIAS_PREDEFINIDAS = [
+  { value: '', label: 'Sem categoria' },
+  { value: 'Trabalho', label: '💼 Trabalho' },
+  { value: 'Pessoal', label: '👤 Pessoal' },
+  { value: 'Saúde', label: '🏥 Saúde' },
+  { value: 'Estudos', label: '📚 Estudos' },
+  { value: 'Lazer', label: '🎮 Lazer' },
+  { value: 'Compras', label: '🛒 Compras' },
+  { value: 'Família', label: '👨‍👩‍👧‍👦 Família' },
+  { value: 'Outros', label: '📌 Outros' },
+]
 
 function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = null }) {
   const [nome, setNome] = useState(editingReminder?.nome || '')
   const [data, setData] = useState(editingReminder?.data ? editingReminder.data.split('T')[0] : '')
   const [horario, setHorario] = useState(editingReminder?.horario ? editingReminder.horario.substring(0, 5) : '')
   const [descricao, setDescricao] = useState(editingReminder?.descricao || '')
+  const [categoria, setCategoria] = useState(editingReminder?.categoria || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Atualizar campos quando editingReminder mudar
@@ -30,11 +43,13 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       }
       setHorario(horarioValue)
       setDescricao(editingReminder.descricao || '')
+      setCategoria(editingReminder.categoria || '')
     } else {
       setNome('')
       setData('')
       setHorario('')
       setDescricao('')
+      setCategoria('')
     }
   }, [editingReminder])
 
@@ -71,6 +86,7 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       data, 
       horario || null, 
       descricao || null,
+      categoria || null,
       editingReminder?.id
     )
     
@@ -80,6 +96,7 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       setData('')
       setHorario('')
       setDescricao('')
+      setCategoria('')
       
       // Feedback visual de sucesso
       const button = document.querySelector('button[type="submit"]')
@@ -198,6 +215,29 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
             rows="3"
             className="input-field resize-none"
           />
+        </div>
+
+        {/* Campo Categoria (Opcional) */}
+        <div className="space-y-2">
+          <label 
+            htmlFor="categoria" 
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
+          >
+            <Tag className="w-4 h-4" />
+            Categoria <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(opcional)</span>
+          </label>
+          <select
+            id="categoria"
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            className="input-field"
+          >
+            {CATEGORIAS_PREDEFINIDAS.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Botão Submit */}
