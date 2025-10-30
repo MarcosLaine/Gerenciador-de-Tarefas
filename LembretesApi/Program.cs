@@ -11,11 +11,12 @@ using LembretesApi.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configurar PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+// PRIORIDADE: Variável de ambiente primeiro (para Render), depois appsettings.json
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Se vier do Render (formato postgres://...)
-if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+// Se vier do Render (formato postgresql:// ou postgres://...)
+if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://")))
 {
     try
     {
@@ -32,6 +33,11 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
 }
 
 // Configurar DB Context com PostgreSQL
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("DATABASE_URL não configurada. Configure a variável de ambiente DATABASE_URL no Render.");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -47,9 +53,22 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// Configurar JWT
-var jwtKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("JWT_KEY") ?? "ChaveSecretaSuperSeguraParaDesenvolvimento123!@#";
+// Configurar JWT (prioridade: env var, depois config, depois default)
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") 
+    ?? Environment.GetEnvironmentVariable("Jwt__Key")
+    ?? builder.Configuration["Jwt:Key"] 
+    ?? "ChaveSecretaSuperSeguraParaDesenvolvimento123!@#";
 var key = Encoding.ASCII.GetBytes(jwtKey);
+
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? Environment.GetEnvironmentVariable("Jwt__Issuer")
+    ?? builder.Configuration["Jwt:Issuer"]
+    ?? "LembretesApi";
+
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? Environment.GetEnvironmentVariable("Jwt__Audience")
+    ?? builder.Configuration["Jwt:Audience"]
+    ?? "LembretesApp";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -66,8 +85,8 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         ClockSkew = TimeSpan.Zero
     };
 });
@@ -152,4 +171,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+// Configurar porta para Render (usa $PORT se disponível, senão 5285)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5285";
+app.Run($"http://0.0.0.0:{port}");

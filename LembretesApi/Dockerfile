@@ -16,5 +16,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .
-ENV ASPNETCORE_URLS=http://+:8080
+# Render usa PORT env var, o código no Program.cs já lê isso
 ENTRYPOINT ["dotnet", "LembretesApi.dll"]
