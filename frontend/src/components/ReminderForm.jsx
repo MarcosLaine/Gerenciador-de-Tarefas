@@ -1,4 +1,4 @@
-import { Calendar, FileText, Plus } from 'lucide-react'
+import { Calendar, Clock, FileText, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 function ReminderForm({ onAddReminder }) {
