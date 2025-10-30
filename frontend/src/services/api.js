@@ -40,11 +40,14 @@ export const api = {
   },
 
   // Criar novo lembrete
-  async createReminder(nome, data, horario = null) {
+  async createReminder(nome, data, horario = null, descricao = null) {
     try {
       const body = { nome, data };
       if (horario) {
         body.horario = horario; // Envia como string no formato "HH:mm"
+      }
+      if (descricao) {
+        body.descricao = descricao;
       }
       
       const response = await fetch(API_BASE_URL, {
@@ -80,6 +83,104 @@ export const api = {
       return await response.json();
     } catch (error) {
       console.error('Erro ao criar lembrete:', error);
+      throw error;
+    }
+  },
+
+  // Atualizar lembrete
+  async updateReminder(id, nome, data, horario = null, descricao = null) {
+    try {
+      const body = { nome, data };
+      if (horario) {
+        body.horario = horario;
+      } else {
+        body.horario = null;
+      }
+      if (descricao) {
+        body.descricao = descricao;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(body),
+      });
+      
+      if (response.status === 401) {
+        authService.logout();
+        window.location.href = '/login';
+        throw new Error('Sessão expirada');
+      }
+      
+      if (!response.ok) {
+        let errorMessage = 'Erro ao atualizar lembrete';
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.errors) {
+            const validationErrors = Object.values(errorData.errors).flat();
+            errorMessage = validationErrors.join(', ');
+          }
+        } catch (e) {
+          // Ignora erro ao parsear
+        }
+        throw new Error(errorMessage);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao atualizar lembrete:', error);
+      throw error;
+    }
+  },
+
+  // Marcar lembrete como concluído
+  async markAsCompleted(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/${id}/concluir`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+      });
+      
+      if (response.status === 401) {
+        authService.logout();
+        window.location.href = '/login';
+        throw new Error('Sessão expirada');
+      }
+      
+      if (!response.ok) {
+        throw new Error('Erro ao marcar lembrete como concluído');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao marcar lembrete como concluído:', error);
+      throw error;
+    }
+  },
+
+  // Desmarcar lembrete como concluído
+  async markAsIncomplete(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/${id}/desmarcar`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+      });
+      
+      if (response.status === 401) {
+        authService.logout();
+        window.location.href = '/login';
+        throw new Error('Sessão expirada');
+      }
+      
+      if (!response.ok) {
+        throw new Error('Erro ao desmarcar lembrete');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao desmarcar lembrete:', error);
       throw error;
     }
   },

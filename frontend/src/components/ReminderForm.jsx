@@ -1,45 +1,85 @@
 import { Calendar, Clock, FileText, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-function ReminderForm({ onAddReminder }) {
-  const [nome, setNome] = useState('')
-  const [data, setData] = useState('')
-  const [horario, setHorario] = useState('')
+function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = null }) {
+  const [nome, setNome] = useState(editingReminder?.nome || '')
+  const [data, setData] = useState(editingReminder?.data ? editingReminder.data.split('T')[0] : '')
+  const [horario, setHorario] = useState(editingReminder?.horario ? editingReminder.horario.substring(0, 5) : '')
+  const [descricao, setDescricao] = useState(editingReminder?.descricao || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Atualizar campos quando editingReminder mudar
+  useEffect(() => {
+    if (editingReminder) {
+      setNome(editingReminder.nome || '')
+      // Tratar data - pode vir como string ISO ou apenas date
+      let dateValue = ''
+      if (editingReminder.data) {
+        const dateStr = typeof editingReminder.data === 'string' ? editingReminder.data : editingReminder.data.toString()
+        dateValue = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.substring(0, 10)
+      }
+      setData(dateValue)
+      
+      // Tratar horário - pode vir como string HH:mm:ss ou TimeSpan
+      let horarioValue = ''
+      if (editingReminder.horario) {
+        const horarioStr = typeof editingReminder.horario === 'string' 
+          ? editingReminder.horario 
+          : editingReminder.horario.toString()
+        horarioValue = horarioStr.substring(0, 5)
+      }
+      setHorario(horarioValue)
+      setDescricao(editingReminder.descricao || '')
+    } else {
+      setNome('')
+      setData('')
+      setHorario('')
+      setDescricao('')
+    }
+  }, [editingReminder])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Validação: data e horário não podem ser no passado
-    // Criar data no horário local para evitar problemas de timezone
-    const [year, month, day] = data.split('-').map(Number)
-    const selectedDate = new Date(year, month - 1, day) // month é 0-indexed
-    
-    // Se houver horário, combina data + horário
-    if (horario) {
-      const [hours, minutes] = horario.split(':').map(Number)
-      selectedDate.setHours(hours, minutes, 0, 0)
-    } else {
-      // Se não houver horário, considera o final do dia
-      selectedDate.setHours(23, 59, 59, 999)
-    }
-    
-    const now = new Date()
-    
-    // Comparação considerando apenas data e hora, não timezone
-    if (selectedDate < now) {
-      alert('⚠️ A data e horário do lembrete devem ser no futuro!')
-      return
+    // Validação: data e horário não podem ser no passado (apenas ao criar novo, não ao editar)
+    if (!editingReminder) {
+      // Criar data no horário local para evitar problemas de timezone
+      const [year, month, day] = data.split('-').map(Number)
+      const selectedDate = new Date(year, month - 1, day) // month é 0-indexed
+      
+      // Se houver horário, combina data + horário
+      if (horario) {
+        const [hours, minutes] = horario.split(':').map(Number)
+        selectedDate.setHours(hours, minutes, 0, 0)
+      } else {
+        // Se não houver horário, considera o final do dia
+        selectedDate.setHours(23, 59, 59, 999)
+      }
+      
+      const now = new Date()
+      
+      // Comparação considerando apenas data e hora, não timezone
+      if (selectedDate < now) {
+        alert('⚠️ A data e horário do lembrete devem ser no futuro!')
+        return
+      }
     }
 
     setIsSubmitting(true)
-    const success = await onAddReminder(nome, data, horario || null)
+    const success = await onAddReminder(
+      nome, 
+      data, 
+      horario || null, 
+      descricao || null,
+      editingReminder?.id
+    )
     
     if (success) {
       // Limpar formulário
       setNome('')
       setData('')
       setHorario('')
+      setDescricao('')
       
       // Feedback visual de sucesso
       const button = document.querySelector('button[type="submit"]')
@@ -52,8 +92,11 @@ function ReminderForm({ onAddReminder }) {
     setIsSubmitting(false)
   }
 
-  // Data mínima é hoje
+  // Data mínima é hoje (apenas ao criar novo, não ao editar)
   const getMinDate = () => {
+    if (editingReminder) {
+      return undefined // Permite qualquer data ao editar
+    }
     const today = new Date()
     return today.toISOString().split('T')[0]
   }
@@ -62,8 +105,17 @@ function ReminderForm({ onAddReminder }) {
     <div className="glass-effect rounded-2xl p-8 shadow-2xl">
       <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
         <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        Criar Novo Lembrete
+        {editingReminder ? 'Editar Lembrete' : 'Criar Novo Lembrete'}
       </h2>
+      
+      {editingReminder && (
+        <button
+          onClick={onCancelEdit}
+          className="mb-4 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+        >
+          ← Cancelar edição
+        </button>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Campo Nome */}
@@ -95,7 +147,7 @@ function ReminderForm({ onAddReminder }) {
             <Calendar className="w-4 h-4" />
             Data
           </label>
-          <input
+            <input
             type="date"
             id="data"
             value={data}
@@ -104,6 +156,11 @@ function ReminderForm({ onAddReminder }) {
             required
             className="input-field"
           />
+          {editingReminder && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              ℹ️ Você pode editar a data mesmo se estiver no passado
+            </p>
+          )}
         </div>
 
         {/* Campo Horário (Opcional) */}
@@ -124,6 +181,25 @@ function ReminderForm({ onAddReminder }) {
           />
         </div>
 
+        {/* Campo Descrição (Opcional) */}
+        <div className="space-y-2">
+          <label 
+            htmlFor="descricao" 
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
+          >
+            <FileText className="w-4 h-4" />
+            Descrição <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(opcional)</span>
+          </label>
+          <textarea
+            id="descricao"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder="Adicione detalhes sobre este lembrete..."
+            rows="3"
+            className="input-field resize-none"
+          />
+        </div>
+
         {/* Botão Submit */}
         <button
           type="submit"
@@ -138,7 +214,7 @@ function ReminderForm({ onAddReminder }) {
           ) : (
             <>
               <Plus className="w-5 h-5" />
-              Criar Lembrete
+              {editingReminder ? 'Salvar Alterações' : 'Criar Lembrete'}
             </>
           )}
         </button>

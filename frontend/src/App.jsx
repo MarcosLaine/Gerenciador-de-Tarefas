@@ -5,6 +5,7 @@ import Login from './components/Login'
 import Register from './components/Register'
 import ReminderForm from './components/ReminderForm'
 import ReminderList from './components/ReminderList'
+import SearchAndFilters, { filterReminders } from './components/SearchAndFilters'
 import { useDarkMode } from './hooks/useDarkMode'
 import { api } from './services/api'
 import { authService } from './services/authService'
@@ -14,9 +15,12 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [reminders, setReminders] = useState([])
+  const [allReminders, setAllReminders] = useState([]) // Todos os lembretes (sem filtros)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [user, setUser] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filter, setFilter] = useState('all')
 
   // Verificar autenticação ao iniciar
   useEffect(() => {
@@ -67,6 +71,7 @@ function App() {
         return timeA.localeCompare(timeB)
       })
       
+      setAllReminders(sortedData)
       setReminders(sortedData)
     } catch (err) {
       setError('Erro ao carregar lembretes.')
@@ -95,28 +100,94 @@ function App() {
     setIsAuthenticated(false)
     setUser(null)
     setReminders([])
+    setAllReminders([])
+    setSearchTerm('')
+    setFilter('all')
+    setEditingReminder(null)
   }
 
-  const handleAddReminder = async (nome, data, horario) => {
+  const [editingReminder, setEditingReminder] = useState(null)
+
+  const handleAddReminder = async (nome, data, horario, descricao, id = null) => {
     try {
-      await api.createReminder(nome, data, horario)
-      await loadReminders()
+      if (id) {
+        // Atualizar lembrete existente
+        await api.updateReminder(id, nome, data, horario, descricao)
+        setEditingReminder(null) // Limpar modo de edição
+        await loadReminders()
+      } else {
+        // Criar novo lembrete
+        await api.createReminder(nome, data, horario, descricao)
+        await loadReminders()
+      }
       return true
     } catch (err) {
-      console.error('Erro ao adicionar lembrete:', err)
-      setError(err.message || 'Erro ao adicionar lembrete')
+      console.error('Erro ao adicionar/atualizar lembrete:', err)
+      setError(err.message || 'Erro ao adicionar/atualizar lembrete')
       return false
+    }
+  }
+
+  const handleEditReminder = (reminder) => {
+    setEditingReminder(reminder)
+    // Scroll suave até o formulário
+    document.querySelector('.glass-effect')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingReminder(null)
+  }
+
+  const handleToggleComplete = async (id, isCompleted) => {
+    try {
+      if (isCompleted) {
+        await api.markAsCompleted(id)
+      } else {
+        await api.markAsIncomplete(id)
+      }
+      // Atualizar o lembrete localmente
+      const updated = allReminders.map(r => 
+        r.id === id ? { ...r, concluido: isCompleted } : r
+      )
+      setAllReminders(updated)
+      applyFilters(updated, searchTerm, filter)
+    } catch (err) {
+      console.error('Erro ao alterar status do lembrete:', err)
+      setError(err.message || 'Erro ao alterar status do lembrete')
+      // Recarregar em caso de erro
+      await loadReminders()
     }
   }
 
   const handleDeleteReminder = async (id) => {
     try {
       await api.deleteReminder(id)
-      setReminders(reminders.filter(r => r.id !== id))
+      const updated = allReminders.filter(r => r.id !== id)
+      setAllReminders(updated)
+      applyFilters(updated, searchTerm, filter)
+      
+      // Se estava editando o lembrete deletado, limpar edição
+      if (editingReminder?.id === id) {
+        setEditingReminder(null)
+      }
     } catch (err) {
       console.error('Erro ao deletar lembrete:', err)
+      setError(err.message || 'Erro ao deletar lembrete')
+      // Recarregar em caso de erro
+      await loadReminders()
     }
   }
+
+  // Aplicar filtros aos lembretes
+  const applyFilters = (reminderList, search, filterType) => {
+    const filtered = filterReminders(reminderList, search, filterType)
+    setReminders(filtered)
+  }
+
+  // Atualizar quando busca ou filtro mudar
+  useEffect(() => {
+    applyFilters(allReminders, searchTerm, filter)
+  }, [searchTerm, filter, allReminders])
 
   // Se não estiver autenticado, mostrar login/registro
   if (!isAuthenticated) {
@@ -183,7 +254,21 @@ function App() {
 
         {/* Formulário */}
         <div className="mb-8 animate-slide-up">
-          <ReminderForm onAddReminder={handleAddReminder} />
+          <ReminderForm 
+            onAddReminder={handleAddReminder} 
+            editingReminder={editingReminder}
+            onCancelEdit={handleCancelEdit}
+          />
+        </div>
+
+        {/* Busca e Filtros */}
+        <div className="mb-6 animate-slide-up">
+          <SearchAndFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filter={filter}
+            onFilterChange={setFilter}
+          />
         </div>
 
         {/* Lista de Lembretes */}
@@ -196,7 +281,9 @@ function App() {
           ) : (
             <ReminderList 
               reminders={reminders} 
-              onDeleteReminder={handleDeleteReminder} 
+              onDeleteReminder={handleDeleteReminder}
+              onEditReminder={handleEditReminder}
+              onToggleComplete={handleToggleComplete}
             />
           )}
         </div>

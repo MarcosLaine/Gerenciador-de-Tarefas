@@ -98,6 +98,8 @@ function ReminderList({ reminders, onDeleteReminder }) {
                     key={reminder.id}
                     reminder={reminder}
                     onDelete={onDeleteReminder}
+                    onEdit={onEditReminder}
+                    onToggleComplete={onToggleComplete}
                     index={globalIndexStart + localIndex}
                   />
                 ))}

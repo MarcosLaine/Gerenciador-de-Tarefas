@@ -203,32 +203,64 @@ using (var scope = app.Services.CreateScope())
             }
         }
         
-        // Verifica e adiciona coluna Horario se não existir
+        // Verifica e adiciona colunas se não existirem
         try
         {
-            logger.LogInformation("🔍 Verificando se coluna Horario existe...");
-            var checkColumnSql = @"
+            logger.LogInformation("🔍 Verificando se colunas existem...");
+            
+            // Verificar e adicionar Horario
+            var checkHorarioSql = @"
                 SELECT column_name 
                 FROM information_schema.columns 
                 WHERE table_name = 'Lembretes' AND column_name = 'Horario'";
             
-            var columnExists = context.Database.SqlQueryRaw<string>(checkColumnSql).Any();
+            var horarioExists = context.Database.SqlQueryRaw<string>(checkHorarioSql).Any();
             
-            if (!columnExists)
+            if (!horarioExists)
             {
                 logger.LogWarning("⚠️ Coluna Horario não encontrada. Criando...");
-                var addColumnSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Horario"" interval NULL";
-                context.Database.ExecuteSqlRaw(addColumnSql);
+                var addHorarioSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Horario"" interval NULL";
+                context.Database.ExecuteSqlRaw(addHorarioSql);
                 logger.LogInformation("✅ Coluna Horario adicionada com sucesso!");
             }
-            else
+            
+            // Verificar e adicionar Descricao
+            var checkDescricaoSql = @"
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'Lembretes' AND column_name = 'Descricao'";
+            
+            var descricaoExists = context.Database.SqlQueryRaw<string>(checkDescricaoSql).Any();
+            
+            if (!descricaoExists)
             {
-                logger.LogInformation("✅ Coluna Horario já existe.");
+                logger.LogWarning("⚠️ Coluna Descricao não encontrada. Criando...");
+                var addDescricaoSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Descricao"" text NULL";
+                context.Database.ExecuteSqlRaw(addDescricaoSql);
+                logger.LogInformation("✅ Coluna Descricao adicionada com sucesso!");
             }
+            
+            // Verificar e adicionar Concluido
+            var checkConcluidoSql = @"
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'Lembretes' AND column_name = 'Concluido'";
+            
+            var concluidoExists = context.Database.SqlQueryRaw<string>(checkConcluidoSql).Any();
+            
+            if (!concluidoExists)
+            {
+                logger.LogWarning("⚠️ Coluna Concluido não encontrada. Criando...");
+                var addConcluidoSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Concluido"" boolean NOT NULL DEFAULT false";
+                context.Database.ExecuteSqlRaw(addConcluidoSql);
+                logger.LogInformation("✅ Coluna Concluido adicionada com sucesso!");
+            }
+            
+            logger.LogInformation("✅ Todas as colunas verificadas/criadas.");
         }
         catch (Exception colEx)
         {
-            logger.LogError(colEx, "❌ Erro ao verificar/criar coluna Horario: {Error}", colEx.Message);
+            logger.LogError(colEx, "❌ Erro ao verificar/criar colunas: {Error}", colEx.Message);
             // Não lança exceção, apenas loga o erro
         }
     }

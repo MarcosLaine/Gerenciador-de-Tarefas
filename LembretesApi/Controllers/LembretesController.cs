@@ -40,8 +40,10 @@ namespace LembretesApi.Controllers
                     {
                         l.Id,
                         l.Nome,
+                        l.Descricao,
                         l.Data,
                         l.Horario,
+                        l.Concluido,
                         l.DataCriacao,
                         l.UsuarioId
                     })
@@ -69,6 +71,7 @@ namespace LembretesApi.Controllers
                 var lembrete = new Lembrete
                 {
                     Nome = dto.Nome,
+                    Descricao = dto.Descricao,
                     Data = dto.Data,
                     UsuarioId = usuarioId,
                     DataCriacao = DateTime.UtcNow
@@ -119,8 +122,10 @@ namespace LembretesApi.Controllers
                 {
                     lembrete.Id,
                     lembrete.Nome,
+                    lembrete.Descricao,
                     lembrete.Data,
                     lembrete.Horario,
+                    lembrete.Concluido,
                     lembrete.DataCriacao,
                     lembrete.UsuarioId
                 });
@@ -131,6 +136,167 @@ namespace LembretesApi.Controllers
                     message = "Erro ao criar lembrete", 
                     error = ex.Message,
                     innerError = ex.InnerException?.Message
+                });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<Lembrete>> Update(int id, UpdateLembreteDto dto)
+        {
+            try
+            {
+                var usuarioId = ObterUsuarioId();
+                
+                var lembrete = await _context.Lembretes
+                    .FirstOrDefaultAsync(l => l.Id == id && l.UsuarioId == usuarioId);
+
+                if (lembrete == null)
+                {
+                    return NotFound(new { message = "Lembrete não encontrado" });
+                }
+
+                // Atualizar campos
+                lembrete.Nome = dto.Nome;
+                lembrete.Descricao = dto.Descricao;
+                lembrete.Data = dto.Data;
+
+                // Converter horário de string para TimeSpan se fornecido
+                if (!string.IsNullOrEmpty(dto.Horario))
+                {
+                    var horarioStr = dto.Horario;
+                    if (!horarioStr.Contains(':'))
+                    {
+                        return BadRequest(new { message = "Formato de horário inválido. Use o formato HH:mm" });
+                    }
+                    
+                    var parts = horarioStr.Split(':');
+                    if (parts.Length == 2)
+                    {
+                        horarioStr = $"{horarioStr}:00";
+                    }
+                    
+                    if (TimeSpan.TryParse(horarioStr, out var timeSpan))
+                    {
+                        lembrete.Horario = timeSpan;
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Formato de horário inválido. Use o formato HH:mm" });
+                    }
+                }
+                else
+                {
+                    lembrete.Horario = null;
+                }
+
+                // Converte data para UTC (PostgreSQL exige)
+                if (lembrete.Data.Kind == DateTimeKind.Unspecified)
+                {
+                    lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
+                }
+                else if (lembrete.Data.Kind == DateTimeKind.Local)
+                {
+                    lembrete.Data = lembrete.Data.ToUniversalTime();
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    lembrete.Id,
+                    lembrete.Nome,
+                    lembrete.Descricao,
+                    lembrete.Data,
+                    lembrete.Horario,
+                    lembrete.Concluido,
+                    lembrete.DataCriacao,
+                    lembrete.UsuarioId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    message = "Erro ao atualizar lembrete", 
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        }
+
+        [HttpPatch("{id}/concluir")]
+        public async Task<ActionResult<Lembrete>> MarcarComoConcluido(int id)
+        {
+            try
+            {
+                var usuarioId = ObterUsuarioId();
+                
+                var lembrete = await _context.Lembretes
+                    .FirstOrDefaultAsync(l => l.Id == id && l.UsuarioId == usuarioId);
+
+                if (lembrete == null)
+                {
+                    return NotFound(new { message = "Lembrete não encontrado" });
+                }
+
+                lembrete.Concluido = true;
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    lembrete.Id,
+                    lembrete.Nome,
+                    lembrete.Descricao,
+                    lembrete.Data,
+                    lembrete.Horario,
+                    lembrete.Concluido,
+                    lembrete.DataCriacao,
+                    lembrete.UsuarioId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    message = "Erro ao marcar lembrete como concluído", 
+                    error = ex.Message 
+                });
+            }
+        }
+
+        [HttpPatch("{id}/desmarcar")]
+        public async Task<ActionResult<Lembrete>> DesmarcarComoConcluido(int id)
+        {
+            try
+            {
+                var usuarioId = ObterUsuarioId();
+                
+                var lembrete = await _context.Lembretes
+                    .FirstOrDefaultAsync(l => l.Id == id && l.UsuarioId == usuarioId);
+
+                if (lembrete == null)
+                {
+                    return NotFound(new { message = "Lembrete não encontrado" });
+                }
+
+                lembrete.Concluido = false;
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    lembrete.Id,
+                    lembrete.Nome,
+                    lembrete.Descricao,
+                    lembrete.Data,
+                    lembrete.Horario,
+                    lembrete.Concluido,
+                    lembrete.DataCriacao,
+                    lembrete.UsuarioId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    message = "Erro ao desmarcar lembrete", 
+                    error = ex.Message 
                 });
             }
         }
