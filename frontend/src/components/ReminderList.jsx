@@ -4,7 +4,7 @@ import { Inbox, ListTodo } from 'lucide-react'
 import { useMemo } from 'react'
 import ReminderItem from './ReminderItem'
 
-function ReminderList({ reminders, onDeleteReminder }) {
+function ReminderList({ reminders, onDeleteReminder, onEditReminder, onToggleComplete }) {
   // Agrupar lembretes por data e ordenar por horário dentro de cada grupo
   const groupedReminders = useMemo(() => {
     const groups = {}
