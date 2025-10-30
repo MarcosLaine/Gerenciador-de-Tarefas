@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Linq;
 using System.Text;
 using LembretesApi.Data;
 using LembretesApi.Models;
@@ -150,29 +151,60 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
         
-        // Tenta aplicar migrations se existirem
-        try
+        logger.LogInformation("🔄 Verificando e aplicando migrations...");
+        
+        // Verifica se há migrations pendentes
+        var pendingMigrations = context.Database.GetPendingMigrations().ToList();
+        
+        if (pendingMigrations.Any())
         {
-            context.Database.Migrate();
+            logger.LogInformation($"📦 Encontradas {pendingMigrations.Count} migrations pendentes: {string.Join(", ", pendingMigrations)}");
+            
+            try
+            {
+                context.Database.Migrate();
+                logger.LogInformation("✅ Migrations aplicadas com sucesso!");
+            }
+            catch (Exception migrateEx)
+            {
+                logger.LogError(migrateEx, "❌ Erro ao aplicar migrations: {Error}", migrateEx.Message);
+                throw; // Re-lança a exceção para tratamento abaixo
+            }
         }
-        catch (Exception migrateEx)
+        else
         {
-            // Se não houver migrations ou falhar, cria o banco automaticamente
-            // Isso cria todas as tabelas do Identity + Lembretes baseado no modelo
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning(migrateEx, "Não foi possível aplicar migrations, criando banco automaticamente...");
-            context.Database.EnsureCreated();
+            logger.LogInformation("ℹ️ Nenhuma migration pendente. Banco está atualizado.");
+            
+            // Verifica se o banco existe e tem tabelas
+            if (!context.Database.CanConnect())
+            {
+                logger.LogWarning("⚠️ Não é possível conectar ao banco. Tentando criar...");
+                var created = context.Database.EnsureCreated();
+                if (created)
+                {
+                    logger.LogInformation("✅ Banco criado com sucesso via EnsureCreated()!");
+                }
+            }
         }
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Erro ao criar/aplicar migrações do banco de dados: {Error}", ex.Message);
-        // Não interrompe a aplicação, mas registra o erro
+        logger.LogError(ex, "❌ ERRO CRÍTICO ao aplicar migrations: {Error}", ex.Message);
+        
+        // Em produção, você pode querer falhar o startup se migrations falharem
+        // Em desenvolvimento, continua mas registra o erro
+        if (app.Environment.IsProduction())
+        {
+            // Em produção, é melhor falhar do que rodar com banco desatualizado
+            logger.LogCritical("🚨 CRÍTICO: Falha ao aplicar migrations em produção. A aplicação não iniciará.");
+            throw;
+        }
     }
 }
 
