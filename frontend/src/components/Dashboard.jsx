@@ -123,28 +123,28 @@ function Dashboard({ reminders }) {
   ]
 
   return (
-    <div className="glass-effect rounded-2xl p-8 shadow-2xl mb-6">
-      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-        <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+    <div className="glass-effect rounded-2xl p-6 shadow-2xl">
+      <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+        <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         Dashboard
       </h2>
 
       {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 gap-2 mb-4">
         {statCards.map((stat, index) => {
           const Icon = stat.icon
           return (
             <div
               key={index}
-              className={`${stat.bgColor} rounded-lg p-4 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200`}
+              className={`${stat.bgColor} rounded-lg p-3 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200`}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-800 dark:text-gray-200">{stat.value}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate">{stat.title}</p>
+                  <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{stat.value}</p>
                 </div>
-                <div className={`${stat.color} p-3 rounded-full text-white`}>
-                  <Icon className="w-6 h-6" />
+                <div className={`${stat.color} p-2 rounded-full text-white flex-shrink-0 ml-2`}>
+                  <Icon className="w-4 h-4" />
                 </div>
               </div>
             </div>
@@ -155,35 +155,32 @@ function Dashboard({ reminders }) {
       {/* Estatísticas por Categoria */}
       {Object.keys(stats.porCategoria).length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-            <Tag className="w-5 h-5" />
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <Tag className="w-4 h-4" />
             Por Categoria
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
             {Object.entries(stats.porCategoria).map(([categoria, dados]) => {
               const porcentagem = dados.total > 0 ? Math.round((dados.concluidos / dados.total) * 100) : 0
               return (
                 <div
                   key={categoria}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700"
+                  className="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                       {categoria || 'Sem categoria'}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {dados.concluidos}/{dados.total}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                     <div
-                      className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      className="bg-blue-600 dark:bg-blue-500 h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${porcentagem}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {porcentagem}% concluído
-                  </p>
                 </div>
               )
             })}

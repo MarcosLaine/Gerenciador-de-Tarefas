@@ -1,4 +1,4 @@
-import { Calendar, Clock, FileText, Plus, Tag } from 'lucide-react'
+import { Calendar, Clock, FileText, Plus, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 const CATEGORIAS_PREDEFINIDAS = [
@@ -13,6 +13,25 @@ const CATEGORIAS_PREDEFINIDAS = [
   { value: 'Outros', label: '📌 Outros' },
 ]
 
+// Carregar categorias personalizadas do localStorage
+const loadCustomCategories = () => {
+  try {
+    const stored = localStorage.getItem('customCategories')
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+// Salvar categorias personalizadas no localStorage
+const saveCustomCategories = (categories) => {
+  try {
+    localStorage.setItem('customCategories', JSON.stringify(categories))
+  } catch {
+    // Ignora erro de localStorage
+  }
+}
+
 function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = null }) {
   const [nome, setNome] = useState(editingReminder?.nome || '')
   const [data, setData] = useState(editingReminder?.data ? editingReminder.data.split('T')[0] : '')
@@ -20,6 +39,14 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
   const [descricao, setDescricao] = useState(editingReminder?.descricao || '')
   const [categoria, setCategoria] = useState(editingReminder?.categoria || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customCategories, setCustomCategories] = useState(loadCustomCategories)
+  const [novaCategoria, setNovaCategoria] = useState('')
+  const [showAddCategoria, setShowAddCategoria] = useState(false)
+
+  // Carregar categorias personalizadas ao montar
+  useEffect(() => {
+    setCustomCategories(loadCustomCategories())
+  }, [])
 
   // Atualizar campos quando editingReminder mudar
   useEffect(() => {
@@ -52,6 +79,45 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       setCategoria('')
     }
   }, [editingReminder])
+
+  // Adicionar nova categoria personalizada
+  const handleAddCustomCategory = () => {
+    const trimmed = novaCategoria.trim()
+    if (!trimmed) return
+    
+    // Verificar se já existe nas predefinidas
+    const existsPredefined = CATEGORIAS_PREDEFINIDAS.some(cat => cat.value.toLowerCase() === trimmed.toLowerCase())
+    if (existsPredefined) {
+      alert('Esta categoria já existe nas categorias predefinidas!')
+      return
+    }
+    
+    // Verificar se já existe nas personalizadas
+    const existsCustom = customCategories.some(cat => cat.toLowerCase() === trimmed.toLowerCase())
+    if (existsCustom) {
+      alert('Esta categoria já existe!')
+      return
+    }
+    
+    const updated = [...customCategories, trimmed]
+    setCustomCategories(updated)
+    saveCustomCategories(updated)
+    setCategoria(trimmed) // Selecionar a nova categoria automaticamente
+    setNovaCategoria('')
+    setShowAddCategoria(false)
+  }
+
+  // Remover categoria personalizada
+  const handleRemoveCustomCategory = (catToRemove) => {
+    const updated = customCategories.filter(cat => cat !== catToRemove)
+    setCustomCategories(updated)
+    saveCustomCategories(updated)
+    
+    // Se a categoria removida estava selecionada, limpar seleção
+    if (categoria === catToRemove) {
+      setCategoria('')
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -219,13 +285,25 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
 
         {/* Campo Categoria (Opcional) */}
         <div className="space-y-2">
-          <label 
-            htmlFor="categoria" 
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
-          >
-            <Tag className="w-4 h-4" />
-            Categoria <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(opcional)</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label 
+              htmlFor="categoria" 
+              className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
+            >
+              <Tag className="w-4 h-4" />
+              Categoria <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(opcional)</span>
+            </label>
+            {!showAddCategoria && (
+              <button
+                type="button"
+                onClick={() => setShowAddCategoria(true)}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                + Criar categoria
+              </button>
+            )}
+          </div>
+          
           <select
             id="categoria"
             value={categoria}
@@ -237,7 +315,76 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
                 {cat.label}
               </option>
             ))}
+            {customCategories.length > 0 && (
+              <optgroup label="Categorias Personalizadas">
+                {customCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
+
+          {/* Adicionar nova categoria */}
+          {showAddCategoria && (
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={novaCategoria}
+                onChange={(e) => setNovaCategoria(e.target.value)}
+                placeholder="Nome da categoria"
+                className="input-field flex-1"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddCustomCategory()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomCategory}
+                className="px-3 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                title="Adicionar categoria"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddCategoria(false)
+                  setNovaCategoria('')
+                }}
+                className="px-3 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors"
+                title="Cancelar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Lista de categorias personalizadas */}
+          {customCategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {customCategories.map((cat) => (
+                <span
+                  key={cat}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs border border-purple-300 dark:border-purple-700"
+                >
+                  {cat}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCustomCategory(cat)}
+                    className="hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    title="Remover categoria"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Botão Submit */}

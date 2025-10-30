@@ -272,7 +272,7 @@ function App() {
   // Interface principal (autenticado)
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <header className="text-center mb-12 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
@@ -313,27 +313,26 @@ function App() {
           </div>
         )}
 
-        {/* Formulário */}
-        <div className="mb-8 animate-slide-up">
-          <ReminderForm 
-            onAddReminder={handleAddReminder} 
-            editingReminder={editingReminder}
-            onCancelEdit={handleCancelEdit}
-          />
+        {/* Formulário e Dashboard lado a lado */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-slide-up">
+          <div>
+            <ReminderForm 
+              onAddReminder={handleAddReminder} 
+              editingReminder={editingReminder}
+              onCancelEdit={handleCancelEdit}
+            />
+          </div>
+          {!loading && allReminders.length > 0 && (
+            <div>
+              <Dashboard reminders={allReminders} />
+            </div>
+          )}
         </div>
 
-        {/* Dashboard */}
-        {!loading && allReminders.length > 0 && (
-          <div className="mb-6 animate-slide-up">
-            <Dashboard reminders={allReminders} />
-          </div>
-        )}
-
-        {/* Exportar/Importar */}
+        {/* Importar */}
         {!loading && (
           <div className="mb-6 animate-slide-up">
             <ExportImport 
-              reminders={allReminders} 
               onImportSuccess={handleImportReminders}
             />
           </div>

@@ -14,7 +14,9 @@ const getCategoryColor = (categoria) => {
     'Família': 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-700',
     'Outros': 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
   }
-  return colors[categoria] || colors['Outros']
+  
+  // Se a categoria não está nas predefinidas, usa uma cor padrão para personalizadas
+  return colors[categoria] || 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700'
 }
 
 // Função para verificar se lembrete está próximo (hoje ou próximas 24h)

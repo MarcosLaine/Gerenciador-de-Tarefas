@@ -1,54 +1,9 @@
-import { Download, FileJson, FileSpreadsheet, Upload, X } from 'lucide-react'
+import { Upload, X } from 'lucide-react'
 import { useState } from 'react'
 
-function ExportImport({ reminders, onImportSuccess }) {
+function ExportImport({ onImportSuccess }) {
   const [showImport, setShowImport] = useState(false)
   const [importError, setImportError] = useState(null)
-
-  // Exportar para JSON
-  const exportToJSON = () => {
-    const dataStr = JSON.stringify(reminders, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `lembretes-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  // Exportar para CSV
-  const exportToCSV = () => {
-    const headers = ['Nome', 'Descrição', 'Categoria', 'Data', 'Horário', 'Concluído', 'Data de Criação']
-    const rows = reminders.map(r => {
-      const data = typeof r.data === 'string' ? r.data : new Date(r.data).toISOString()
-      const horario = r.horario ? (typeof r.horario === 'string' ? r.horario.substring(0, 5) : r.horario.toString().substring(0, 5)) : ''
-      const dataCriacao = typeof r.dataCriacao === 'string' ? r.dataCriacao : new Date(r.dataCriacao).toISOString()
-      
-      return [
-        `"${(r.nome || '').replace(/"/g, '""')}"`,
-        `"${(r.descricao || '').replace(/"/g, '""')}"`,
-        `"${(r.categoria || '').replace(/"/g, '""')}"`,
-        `"${data}"`,
-        `"${horario}"`,
-        r.concluido ? 'Sim' : 'Não',
-        `"${dataCriacao}"`
-      ].join(',')
-    })
-
-    const csvContent = [headers.join(','), ...rows].join('\n')
-    const dataBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `lembretes-${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
 
   // Importar de JSON
   const handleFileImport = (event) => {
@@ -94,8 +49,8 @@ function ExportImport({ reminders, onImportSuccess }) {
     <div className="glass-effect rounded-2xl p-6 shadow-2xl mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          Exportar / Importar
+          <Upload className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          Importar Lembretes
         </h3>
         {showImport && (
           <button
@@ -110,45 +65,19 @@ function ExportImport({ reminders, onImportSuccess }) {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Botões de Exportação */}
-        <div className="flex gap-3 flex-1">
-          <button
-            onClick={exportToJSON}
-            disabled={reminders.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-1 justify-center"
-            title="Exportar lembretes em formato JSON"
-          >
-            <FileJson className="w-4 h-4" />
-            <span className="hidden sm:inline">Exportar JSON</span>
-            <span className="sm:hidden">JSON</span>
-          </button>
-
-          <button
-            onClick={exportToCSV}
-            disabled={reminders.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-1 justify-center"
-            title="Exportar lembretes em formato CSV"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span className="hidden sm:inline">Exportar CSV</span>
-            <span className="sm:hidden">CSV</span>
-          </button>
-        </div>
-
-        {/* Botão de Importação */}
+      <div>
         {!showImport ? (
           <button
             onClick={() => setShowImport(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors justify-center"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors"
             title="Importar lembretes de arquivo JSON"
           >
             <Upload className="w-4 h-4" />
-            <span>Importar</span>
+            <span>Importar do JSON</span>
           </button>
         ) : (
-          <div className="flex flex-col gap-2 flex-1">
-            <label className="flex items-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors cursor-pointer justify-center">
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors cursor-pointer">
               <Upload className="w-4 h-4" />
               <span>Selecionar Arquivo JSON</span>
               <input
