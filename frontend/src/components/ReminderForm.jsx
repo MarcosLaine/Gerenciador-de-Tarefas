@@ -11,12 +11,14 @@ function ReminderForm({ onAddReminder }) {
     e.preventDefault()
     
     // Validação: data e horário não podem ser no passado
-    const selectedDate = new Date(data)
+    // Criar data no horário local para evitar problemas de timezone
+    const [year, month, day] = data.split('-').map(Number)
+    const selectedDate = new Date(year, month - 1, day) // month é 0-indexed
     
     // Se houver horário, combina data + horário
     if (horario) {
-      const [hours, minutes] = horario.split(':')
-      selectedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      const [hours, minutes] = horario.split(':').map(Number)
+      selectedDate.setHours(hours, minutes, 0, 0)
     } else {
       // Se não houver horário, considera o final do dia
       selectedDate.setHours(23, 59, 59, 999)
@@ -24,6 +26,7 @@ function ReminderForm({ onAddReminder }) {
     
     const now = new Date()
     
+    // Comparação considerando apenas data e hora, não timezone
     if (selectedDate < now) {
       alert('⚠️ A data e horário do lembrete devem ser no futuro!')
       return
