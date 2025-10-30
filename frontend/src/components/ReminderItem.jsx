@@ -1,4 +1,4 @@
-import { CheckCircle2, X } from 'lucide-react'
+import { CheckCircle2, Clock, X } from 'lucide-react'
 import { useState } from 'react'
 
 function ReminderItem({ reminder, onDelete, index }) {
@@ -9,6 +9,14 @@ function ReminderItem({ reminder, onDelete, index }) {
       setIsDeleting(true)
       await onDelete(reminder.id)
     }
+  }
+
+  // Formatar horário se existir
+  const formatHorario = (horario) => {
+    if (!horario) return null;
+    // horario pode vir como string "HH:mm:ss" ou objeto TimeSpan
+    const timeStr = typeof horario === 'string' ? horario : horario.toString();
+    return timeStr.substring(0, 5); // Pega apenas HH:mm
   }
 
   return (
@@ -27,9 +35,17 @@ function ReminderItem({ reminder, onDelete, index }) {
       {/* Ícone de Check */}
       <div className="flex items-center gap-3 flex-1">
         <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400 flex-shrink-0" />
-        <span className="text-gray-800 dark:text-gray-200 font-medium break-words">
-          {reminder.nome}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-gray-800 dark:text-gray-200 font-medium break-words">
+            {reminder.nome}
+          </span>
+          {reminder.horario && (
+            <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+              <Clock className="w-3 h-3" />
+              {formatHorario(reminder.horario)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Botão de Deletar */}

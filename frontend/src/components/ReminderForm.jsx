@@ -4,6 +4,7 @@ import { useState } from 'react'
 function ReminderForm({ onAddReminder }) {
   const [nome, setNome] = useState('')
   const [data, setData] = useState('')
+  const [horario, setHorario] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e) => {
@@ -20,12 +21,13 @@ function ReminderForm({ onAddReminder }) {
     }
 
     setIsSubmitting(true)
-    const success = await onAddReminder(nome, data)
+    const success = await onAddReminder(nome, data, horario || null)
     
     if (success) {
       // Limpar formulário
       setNome('')
       setData('')
+      setHorario('')
       
       // Feedback visual de sucesso
       const button = document.querySelector('button[type="submit"]')
@@ -88,6 +90,24 @@ function ReminderForm({ onAddReminder }) {
             onChange={(e) => setData(e.target.value)}
             min={getMinDate()}
             required
+            className="input-field"
+          />
+        </div>
+
+        {/* Campo Horário (Opcional) */}
+        <div className="space-y-2">
+          <label 
+            htmlFor="horario" 
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
+          >
+            <Clock className="w-4 h-4" />
+            Horário <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(opcional)</span>
+          </label>
+          <input
+            type="time"
+            id="horario"
+            value={horario}
+            onChange={(e) => setHorario(e.target.value)}
             className="input-field"
           />
         </div>

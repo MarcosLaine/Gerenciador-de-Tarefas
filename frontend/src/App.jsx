@@ -68,9 +68,9 @@ function App() {
     setReminders([])
   }
 
-  const handleAddReminder = async (nome, data) => {
+  const handleAddReminder = async (nome, data, horario) => {
     try {
-      await api.createReminder(nome, data)
+      await api.createReminder(nome, data, horario)
       await loadReminders()
       return true
     } catch (err) {

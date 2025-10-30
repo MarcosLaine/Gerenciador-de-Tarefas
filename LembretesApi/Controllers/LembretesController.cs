@@ -40,6 +40,7 @@ namespace LembretesApi.Controllers
                         l.Id,
                         l.Nome,
                         l.Data,
+                        l.Horario,
                         l.DataCriacao,
                         l.UsuarioId
                     })
@@ -86,6 +87,7 @@ namespace LembretesApi.Controllers
                     lembrete.Id,
                     lembrete.Nome,
                     lembrete.Data,
+                    lembrete.Horario,
                     lembrete.DataCriacao,
                     lembrete.UsuarioId
                 });

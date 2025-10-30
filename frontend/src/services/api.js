@@ -40,12 +40,17 @@ export const api = {
   },
 
   // Criar novo lembrete
-  async createReminder(nome, data) {
+  async createReminder(nome, data, horario = null) {
     try {
+      const body = { nome, data };
+      if (horario) {
+        body.horario = horario;
+      }
+      
       const response = await fetch(API_BASE_URL, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ nome, data }),
+        body: JSON.stringify(body),
       });
       
       if (response.status === 401) {
