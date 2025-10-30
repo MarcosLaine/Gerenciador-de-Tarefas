@@ -23,12 +23,18 @@ if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("pos
         var uri = new Uri(connectionString);
         var userInfo = uri.UserInfo.Split(':');
         var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        
+        // Usar porta padrão 5432 se não especificada na URL
+        var port = uri.Port == -1 ? 5432 : uri.Port;
+        
+        connectionString = $"Host={uri.Host};Port={port};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};SSL Mode=Require;Trust Server Certificate=true";
     }
     catch (Exception ex)
     {
         var logger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Program");
-        logger.LogWarning(ex, "Erro ao processar connection string, usando original");
+        logger.LogWarning(ex, "Erro ao processar connection string: {Error}", ex.Message);
+        // Não usar a original se falhou, vai lançar exceção depois
+        connectionString = null;
     }
 }
 

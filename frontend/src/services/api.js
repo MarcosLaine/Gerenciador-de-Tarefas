@@ -1,6 +1,9 @@
 import { authService } from './authService';
 
-const API_BASE_URL = '/api/lembretes';
+// Usa variável de ambiente em produção, proxy em desenvolvimento
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api/lembretes`
+  : '/api/lembretes';
 
 const getHeaders = () => {
   return {

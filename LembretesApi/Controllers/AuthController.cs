@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using LembretesApi.Models;
 using LembretesApi.DTOs;
 using LembretesApi.Services;
@@ -27,64 +28,87 @@ namespace LembretesApi.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var usuario = new Usuario
+            try
             {
-                Nome = dto.Nome,
-                UserName = dto.Email,
-                Email = dto.Email,
-                DataCriacao = DateTime.UtcNow
-            };
-
-            var result = await _userManager.CreateAsync(usuario, dto.Senha);
-
-            if (!result.Succeeded)
-            {
-                foreach (var error in result.Errors)
+                if (!ModelState.IsValid)
                 {
-                    ModelState.AddModelError(string.Empty, error.Description);
+                    var errors = ModelState
+                        .Where(x => x.Value?.Errors.Count > 0)
+                        .SelectMany(x => x.Value!.Errors.Select(e => e.ErrorMessage))
+                        .ToList();
+                    return BadRequest(new { message = string.Join(", ", errors), errors });
                 }
-                return BadRequest(ModelState);
+
+                var usuario = new Usuario
+                {
+                    Nome = dto.Nome,
+                    UserName = dto.Email,
+                    Email = dto.Email,
+                    DataCriacao = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(usuario, dto.Senha);
+
+                if (!result.Succeeded)
+                {
+                    var errorMessages = result.Errors.Select(e => e.Description).ToList();
+                    return BadRequest(new { message = string.Join(", ", errorMessages), errors = errorMessages });
+                }
+
+                var token = _tokenService.GerarToken(usuario);
+
+                return Ok(new AuthResponseDto
+                {
+                    Token = token,
+                    Email = usuario.Email ?? string.Empty,
+                    Nome = usuario.Nome ?? string.Empty,
+                    Expiracao = DateTime.UtcNow.AddDays(7)
+                });
             }
-
-            var token = _tokenService.GerarToken(usuario);
-
-            return Ok(new AuthResponseDto
+            catch (Exception ex)
             {
-                Token = token,
-                Email = usuario.Email ?? string.Empty,
-                Nome = usuario.Nome ?? string.Empty,
-                Expiracao = DateTime.UtcNow.AddDays(7)
-            });
+                return StatusCode(500, new { message = "Erro interno do servidor", error = ex.Message });
+            }
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var usuario = await _userManager.FindByEmailAsync(dto.Email);
-
-            if (usuario == null)
-                return Unauthorized(new { message = "Email ou senha inválidos" });
-
-            var result = await _signInManager.CheckPasswordSignInAsync(usuario, dto.Senha, false);
-
-            if (!result.Succeeded)
-                return Unauthorized(new { message = "Email ou senha inválidos" });
-
-            var token = _tokenService.GerarToken(usuario);
-
-            return Ok(new AuthResponseDto
+            try
             {
-                Token = token,
-                Email = usuario.Email ?? string.Empty,
-                Nome = usuario.Nome ?? string.Empty,
-                Expiracao = DateTime.UtcNow.AddDays(7)
-            });
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState
+                        .Where(x => x.Value?.Errors.Count > 0)
+                        .SelectMany(x => x.Value!.Errors.Select(e => e.ErrorMessage))
+                        .ToList();
+                    return BadRequest(new { message = string.Join(", ", errors), errors });
+                }
+
+                var usuario = await _userManager.FindByEmailAsync(dto.Email);
+
+                if (usuario == null)
+                    return Unauthorized(new { message = "Email ou senha inválidos" });
+
+                var result = await _signInManager.CheckPasswordSignInAsync(usuario, dto.Senha, false);
+
+                if (!result.Succeeded)
+                    return Unauthorized(new { message = "Email ou senha inválidos" });
+
+                var token = _tokenService.GerarToken(usuario);
+
+                return Ok(new AuthResponseDto
+                {
+                    Token = token,
+                    Email = usuario.Email ?? string.Empty,
+                    Nome = usuario.Nome ?? string.Empty,
+                    Expiracao = DateTime.UtcNow.AddDays(7)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro interno do servidor", error = ex.Message });
+            }
         }
     }
 }

@@ -1,4 +1,7 @@
-const API_BASE_URL = '/api/auth';
+// Usa variável de ambiente em produção, ou proxy em desenvolvimento
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api/auth`
+  : '/api/auth';
 
 export const authService = {
   // Registrar novo usuário
@@ -12,12 +15,29 @@ export const authService = {
         body: JSON.stringify({ nome, email, senha }),
       });
 
+      // Verificar se a resposta tem conteúdo antes de fazer parse
+      const text = await response.text();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao registrar');
+        try {
+          const error = JSON.parse(text);
+          // ModelState errors vem com estrutura diferente
+          const errorMessage = error.message || 
+                              error.title || 
+                              (error.errors && Object.values(error.errors).flat().join(', ')) ||
+                              'Erro ao registrar';
+          throw new Error(errorMessage);
+        } catch (parseError) {
+          // Se não conseguir fazer parse, usar o texto da resposta ou status
+          throw new Error(text || `Erro ${response.status}: ${response.statusText}`);
+        }
       }
 
-      const data = await response.json();
+      if (!text) {
+        throw new Error('Resposta vazia do servidor');
+      }
+
+      const data = JSON.parse(text);
       this.saveToken(data.token);
       this.saveUser({ nome: data.nome, email: data.email });
       return data;
@@ -38,12 +58,24 @@ export const authService = {
         body: JSON.stringify({ email, senha }),
       });
 
+      // Verificar se a resposta tem conteúdo antes de fazer parse
+      const text = await response.text();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Email ou senha inválidos');
+        try {
+          const error = JSON.parse(text);
+          throw new Error(error.message || error.title || 'Email ou senha inválidos');
+        } catch (parseError) {
+          // Se não conseguir fazer parse, usar o texto da resposta ou status
+          throw new Error(text || `Erro ${response.status}: ${response.statusText}`);
+        }
       }
 
-      const data = await response.json();
+      if (!text) {
+        throw new Error('Resposta vazia do servidor');
+      }
+
+      const data = JSON.parse(text);
       this.saveToken(data.token);
       this.saveUser({ nome: data.nome, email: data.email });
       return data;
