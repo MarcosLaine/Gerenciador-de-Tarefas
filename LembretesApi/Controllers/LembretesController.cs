@@ -63,6 +63,16 @@ namespace LembretesApi.Controllers
             {
                 var usuarioId = ObterUsuarioId();
                 
+                // Converte data para UTC (PostgreSQL exige)
+                if (lembrete.Data.Kind == DateTimeKind.Unspecified)
+                {
+                    lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
+                }
+                else if (lembrete.Data.Kind == DateTimeKind.Local)
+                {
+                    lembrete.Data = lembrete.Data.ToUniversalTime();
+                }
+                
                 lembrete.UsuarioId = usuarioId;
                 lembrete.DataCriacao = DateTime.UtcNow;
                 lembrete.Usuario = null; // Evita referência circular

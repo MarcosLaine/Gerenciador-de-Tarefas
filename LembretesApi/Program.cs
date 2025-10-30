@@ -45,6 +45,9 @@ if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("DATABASE_URL não configurada. Configure a variável de ambiente DATABASE_URL no Render.");
 }
 
+// Configurar Npgsql para aceitar datas sem timezone (converte automaticamente para UTC)
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
