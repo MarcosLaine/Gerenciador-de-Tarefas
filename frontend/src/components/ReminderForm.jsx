@@ -10,13 +10,22 @@ function ReminderForm({ onAddReminder }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Validação: data não pode ser no passado
+    // Validação: data e horário não podem ser no passado
     const selectedDate = new Date(data)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
     
-    if (selectedDate < today) {
-      alert('⚠️ A data do lembrete deve ser hoje ou no futuro!')
+    // Se houver horário, combina data + horário
+    if (horario) {
+      const [hours, minutes] = horario.split(':')
+      selectedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    } else {
+      // Se não houver horário, considera o final do dia
+      selectedDate.setHours(23, 59, 59, 999)
+    }
+    
+    const now = new Date()
+    
+    if (selectedDate < now) {
+      alert('⚠️ A data e horário do lembrete devem ser no futuro!')
       return
     }
 
