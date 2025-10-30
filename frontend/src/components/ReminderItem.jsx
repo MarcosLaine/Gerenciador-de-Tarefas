@@ -59,9 +59,9 @@ function ReminderItem({ reminder, onDelete, index }) {
         {isDeleting ? 'Removendo...' : 'Remover'}
       </button>
 
-      {/* Badge de ID (para debug) */}
+      {/* Badge de Numeração Sequencial */}
       <span className="absolute -top-2 -left-2 bg-blue-500 dark:bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        #{reminder.id}
+        #{index + 1}
       </span>
     </div>
   )

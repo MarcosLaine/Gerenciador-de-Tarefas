@@ -47,10 +47,16 @@ function ReminderList({ reminders, onDeleteReminder }) {
       </h2>
 
       <div className="space-y-6">
-        {sortedDates.map((date) => {
+        {sortedDates.map((date, dateIndex) => {
           const dateObj = parseISO(date)
           const formattedDate = format(dateObj, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
           const dayOfWeek = format(dateObj, 'EEEE', { locale: ptBR })
+          
+          // Calcular índice inicial para esta data (soma todos os lembretes das datas anteriores)
+          let globalIndexStart = 0
+          for (let i = 0; i < dateIndex; i++) {
+            globalIndexStart += groupedReminders[sortedDates[i]].length
+          }
           
           return (
             <div key={date} className="animate-slide-up">
@@ -66,12 +72,12 @@ function ReminderList({ reminders, onDeleteReminder }) {
               
               {/* Lista de Lembretes da Data */}
               <div className="space-y-2 ml-4">
-                {groupedReminders[date].map((reminder, index) => (
+                {groupedReminders[date].map((reminder, localIndex) => (
                   <ReminderItem
                     key={reminder.id}
                     reminder={reminder}
                     onDelete={onDeleteReminder}
-                    index={index}
+                    index={globalIndexStart + localIndex}
                   />
                 ))}
               </div>
