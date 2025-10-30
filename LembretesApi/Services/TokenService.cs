@@ -25,15 +25,32 @@ namespace LembretesApi.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
+            // Usa a mesma lógica do Program.cs para ler JWT_KEY (prioridade: env var, depois config)
+            var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") 
+                ?? Environment.GetEnvironmentVariable("Jwt__Key")
+                ?? _configuration["Jwt:Key"] 
+                ?? throw new InvalidOperationException("JWT Key não configurada");
+
+            var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                ?? Environment.GetEnvironmentVariable("Jwt__Issuer")
+                ?? _configuration["Jwt:Issuer"]
+                ?? "LembretesApi";
+
+            var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                ?? Environment.GetEnvironmentVariable("Jwt__Audience")
+                ?? _configuration["Jwt:Audience"]
+                ?? "LembretesApp";
+
+            // IMPORTANTE: Usa ASCII (mesmo encoding do Program.cs)
             var chave = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key não configurada"))
+                Encoding.ASCII.GetBytes(jwtKey)
             );
 
             var credenciais = new SigningCredentials(chave, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: jwtIssuer,
+                audience: jwtAudience,
                 claims: claims,
                 expires: DateTime.UtcNow.AddDays(7),
                 signingCredentials: credenciais
