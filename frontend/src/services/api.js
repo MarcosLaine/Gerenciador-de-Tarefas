@@ -42,7 +42,18 @@ export const api = {
   // Criar novo lembrete
   async createReminder(nome, data, horario = null, descricao = null) {
     try {
-      const body = { nome, data };
+      // Garantir que a data seja enviada com horário no meio do dia para evitar problemas de timezone
+      // Se não tiver horário, usa 12:00 para garantir que a data não mude ao converter timezones
+      let dataParaEnviar = data;
+      if (!horario) {
+        // Adiciona horário 12:00 para evitar problema de timezone
+        dataParaEnviar = `${data}T12:00:00`;
+      } else {
+        // Se tiver horário, combina data e horário
+        dataParaEnviar = `${data}T${horario}:00`;
+      }
+      
+      const body = { nome, data: dataParaEnviar };
       if (horario) {
         body.horario = horario; // Envia como string no formato "HH:mm"
       }
@@ -90,7 +101,17 @@ export const api = {
   // Atualizar lembrete
   async updateReminder(id, nome, data, horario = null, descricao = null) {
     try {
-      const body = { nome, data };
+      // Garantir que a data seja enviada com horário no meio do dia para evitar problemas de timezone
+      let dataParaEnviar = data;
+      if (!horario) {
+        // Adiciona horário 12:00 para evitar problema de timezone
+        dataParaEnviar = `${data}T12:00:00`;
+      } else {
+        // Se tiver horário, combina data e horário
+        dataParaEnviar = `${data}T${horario}:00`;
+      }
+      
+      const body = { nome, data: dataParaEnviar };
       if (horario) {
         body.horario = horario;
       } else {

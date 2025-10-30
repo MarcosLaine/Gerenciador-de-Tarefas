@@ -104,10 +104,28 @@ namespace LembretesApi.Controllers
                     }
                 }
                 
-                // Converte data para UTC (PostgreSQL exige)
+                // Tratar data corretamente para evitar problemas de timezone
+                // Se a data tem apenas data (sem hora específica), tratar como data local
                 if (lembrete.Data.Kind == DateTimeKind.Unspecified)
                 {
-                    lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
+                    // Se a hora é 00:00:00, provavelmente é apenas uma data, então usar meio-dia local
+                    if (lembrete.Data.Hour == 0 && lembrete.Data.Minute == 0 && lembrete.Data.Second == 0)
+                    {
+                        // Criar nova data com a mesma data mas tratando como local
+                        var localDate = new DateTime(
+                            lembrete.Data.Year,
+                            lembrete.Data.Month,
+                            lembrete.Data.Day,
+                            12, 0, 0, // Usar meio-dia para evitar problemas de timezone
+                            DateTimeKind.Local
+                        );
+                        lembrete.Data = localDate.ToUniversalTime();
+                    }
+                    else
+                    {
+                        // Se tem horário, tratar como UTC
+                        lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
+                    }
                 }
                 else if (lembrete.Data.Kind == DateTimeKind.Local)
                 {
@@ -189,10 +207,24 @@ namespace LembretesApi.Controllers
                     lembrete.Horario = null;
                 }
 
-                // Converte data para UTC (PostgreSQL exige)
+                // Tratar data corretamente para evitar problemas de timezone (mesmo tratamento do Create)
                 if (lembrete.Data.Kind == DateTimeKind.Unspecified)
                 {
-                    lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
+                    if (lembrete.Data.Hour == 0 && lembrete.Data.Minute == 0 && lembrete.Data.Second == 0)
+                    {
+                        var localDate = new DateTime(
+                            lembrete.Data.Year,
+                            lembrete.Data.Month,
+                            lembrete.Data.Day,
+                            12, 0, 0,
+                            DateTimeKind.Local
+                        );
+                        lembrete.Data = localDate.ToUniversalTime();
+                    }
+                    else
+                    {
+                        lembrete.Data = DateTime.SpecifyKind(lembrete.Data, DateTimeKind.Utc);
+                    }
                 }
                 else if (lembrete.Data.Kind == DateTimeKind.Local)
                 {

@@ -10,7 +10,11 @@ function ReminderList({ reminders, onDeleteReminder, onEditReminder, onToggleCom
     const groups = {}
     
     reminders.forEach(reminder => {
-      const date = format(parseISO(reminder.data), 'yyyy-MM-dd')
+      // Converter data UTC para local antes de formatar
+      const reminderDate = parseISO(reminder.data)
+      // Criar data local usando apenas ano, mês e dia para evitar problemas de timezone
+      const localDate = new Date(reminderDate.getUTCFullYear(), reminderDate.getUTCMonth(), reminderDate.getUTCDate())
+      const date = format(localDate, 'yyyy-MM-dd')
       if (!groups[date]) {
         groups[date] = []
       }
@@ -69,7 +73,9 @@ function ReminderList({ reminders, onDeleteReminder, onEditReminder, onToggleCom
 
       <div className="space-y-6">
         {sortedDates.map((date, dateIndex) => {
-          const dateObj = parseISO(date)
+          // Parse a data localmente (sem timezone)
+          const [year, month, day] = date.split('-').map(Number)
+          const dateObj = new Date(year, month - 1, day)
           const formattedDate = format(dateObj, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
           const dayOfWeek = format(dateObj, 'EEEE', { locale: ptBR })
           
