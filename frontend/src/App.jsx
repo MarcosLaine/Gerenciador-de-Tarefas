@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Bell, Sparkles, LogOut, User } from 'lucide-react'
-import ReminderForm from './components/ReminderForm'
-import ReminderList from './components/ReminderList'
+import { Bell, LogOut, Sparkles, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import Login from './components/Login'
 import Register from './components/Register'
+import ReminderForm from './components/ReminderForm'
+import ReminderList from './components/ReminderList'
 import { api } from './services/api'
 import { authService } from './services/authService'
 
@@ -166,9 +166,6 @@ function App() {
         </div>
 
         {/* Footer */}
-        <footer className="mt-12 text-center text-gray-500 text-sm">
-          <p>Desenvolvido com ❤️ usando React + Vite + Tailwind CSS</p>
-        </footer>
       </div>
     </div>
   )
