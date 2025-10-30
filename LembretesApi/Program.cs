@@ -202,6 +202,35 @@ using (var scope = app.Services.CreateScope())
                 }
             }
         }
+        
+        // Verifica e adiciona coluna Horario se não existir
+        try
+        {
+            logger.LogInformation("🔍 Verificando se coluna Horario existe...");
+            var checkColumnSql = @"
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'Lembretes' AND column_name = 'Horario'";
+            
+            var columnExists = context.Database.SqlQueryRaw<string>(checkColumnSql).Any();
+            
+            if (!columnExists)
+            {
+                logger.LogWarning("⚠️ Coluna Horario não encontrada. Criando...");
+                var addColumnSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Horario"" interval NULL";
+                context.Database.ExecuteSqlRaw(addColumnSql);
+                logger.LogInformation("✅ Coluna Horario adicionada com sucesso!");
+            }
+            else
+            {
+                logger.LogInformation("✅ Coluna Horario já existe.");
+            }
+        }
+        catch (Exception colEx)
+        {
+            logger.LogError(colEx, "❌ Erro ao verificar/criar coluna Horario: {Error}", colEx.Message);
+            // Não lança exceção, apenas loga o erro
+        }
     }
     catch (Exception ex)
     {
