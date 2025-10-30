@@ -101,8 +101,15 @@ builder.Services.AddAuthentication(options =>
 // Registrar serviços
 builder.Services.AddScoped<TokenService>();
 
-// Adiciona controllers
-builder.Services.AddControllers();
+// Adiciona controllers com configuração JSON
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Ignora referências circulares (Usuario -> Lembrete -> Usuario)
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // Mantém nomes de propriedades em camelCase no JSON
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 
 // Swagger com autenticação
 builder.Services.AddEndpointsApiExplorer();
