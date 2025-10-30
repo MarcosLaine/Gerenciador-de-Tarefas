@@ -3,7 +3,9 @@ import { authService } from './authService';
 // Usa variável de ambiente em produção, proxy em desenvolvimento
 const API_BASE_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api/lembretes`
-  : '/api/lembretes';
+  : window.location.hostname === 'localhost'
+    ? '/api/lembretes'  // Desenvolvimento local
+    : 'https://lembretes-api.onrender.com/api/lembretes';  // Produção (fallback)
 
 const getHeaders = () => {
   return {

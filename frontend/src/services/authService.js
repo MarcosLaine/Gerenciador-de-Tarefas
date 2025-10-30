@@ -1,7 +1,9 @@
 // Usa variável de ambiente em produção, ou proxy em desenvolvimento
 const API_BASE_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api/auth`
-  : '/api/auth';
+  : window.location.hostname === 'localhost' 
+    ? '/api/auth'  // Desenvolvimento local
+    : 'https://lembretes-api.onrender.com/api/auth';  // Produção (fallback)
 
 export const authService = {
   // Registrar novo usuário
