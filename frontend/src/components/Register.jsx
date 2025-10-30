@@ -1,5 +1,5 @@
+import { Lock, Mail, User, UserPlus } from 'lucide-react'
 import { useState } from 'react'
-import { User, Mail, Lock, UserPlus, LogIn } from 'lucide-react'
 import { authService } from '../services/authService'
 
 function Register({ onRegister, onToggleMode }) {
@@ -43,23 +43,23 @@ function Register({ onRegister, onToggleMode }) {
           <div className="inline-block p-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full mb-4">
             <UserPlus className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
             Criar conta
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Cadastre-se para começar a organizar suas tarefas
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {erro && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded animate-slide-up">
-              <p className="text-red-700 text-sm">{erro}</p>
+            <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-400 p-4 rounded animate-slide-up">
+              <p className="text-red-700 dark:text-red-400 text-sm">{erro}</p>
             </div>
           )}
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
               <User className="w-4 h-4" />
               Nome completo
             </label>
@@ -74,7 +74,7 @@ function Register({ onRegister, onToggleMode }) {
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
               <Mail className="w-4 h-4" />
               Email
             </label>
@@ -89,7 +89,7 @@ function Register({ onRegister, onToggleMode }) {
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
               <Lock className="w-4 h-4" />
               Senha
             </label>
@@ -105,7 +105,7 @@ function Register({ onRegister, onToggleMode }) {
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
               <Lock className="w-4 h-4" />
               Confirmar senha
             </label>
@@ -139,11 +139,11 @@ function Register({ onRegister, onToggleMode }) {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Já tem uma conta?{' '}
             <button
               onClick={onToggleMode}
-              className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors"
             >
               Fazer login
             </button>

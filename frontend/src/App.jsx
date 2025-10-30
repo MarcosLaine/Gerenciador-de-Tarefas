@@ -8,6 +8,7 @@ import { api } from './services/api'
 import { authService } from './services/authService'
 
 function App() {
+  const { isDarkMode, toggleDarkMode } = useDarkMode()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [reminders, setReminders] = useState([])
@@ -111,36 +112,39 @@ function App() {
         {/* Header */}
         <header className="text-center mb-12 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <User className="w-5 h-5" />
               <span className="font-medium">Olá, {user?.nome || 'Usuário'}!</span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </button>
+            <div className="flex items-center gap-2">
+              <DarkModeToggle isDarkMode={isDarkMode} onToggle={toggleDarkMode} />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="relative">
-              <Bell className="w-12 h-12 text-blue-600 animate-bounce-subtle" />
-              <Sparkles className="w-5 h-5 text-yellow-400 absolute -top-1 -right-1 animate-pulse" />
+              <Bell className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-bounce-subtle" />
+              <Sparkles className="w-5 h-5 text-yellow-400 dark:text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
             </div>
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
             Sistema de Lembretes
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
             Organize suas tarefas de forma elegante e eficiente ✨
           </p>
         </header>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg animate-slide-up">
+          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-400 text-red-700 dark:text-red-400 rounded-lg animate-slide-up">
             <p className="font-medium">⚠️ {error}</p>
           </div>
         )}
@@ -154,8 +158,8 @@ function App() {
         <div className="animate-fade-in">
           {loading ? (
             <div className="glass-effect rounded-2xl p-12 text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-              <p className="mt-4 text-gray-600">Carregando lembretes...</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 dark:border-blue-400 border-t-transparent"></div>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Carregando lembretes...</p>
             </div>
           ) : (
             <ReminderList 

@@ -1,5 +1,5 @@
+import { Calendar, FileText, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { Plus, Calendar, FileText } from 'lucide-react'
 
 function ReminderForm({ onAddReminder }) {
   const [nome, setNome] = useState('')
@@ -46,8 +46,8 @@ function ReminderForm({ onAddReminder }) {
 
   return (
     <div className="glass-effect rounded-2xl p-8 shadow-2xl">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-        <Plus className="w-6 h-6 text-blue-600" />
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
+        <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         Criar Novo Lembrete
       </h2>
       
@@ -56,7 +56,7 @@ function ReminderForm({ onAddReminder }) {
         <div className="space-y-2">
           <label 
             htmlFor="nome" 
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
           >
             <FileText className="w-4 h-4" />
             Nome do Lembrete
@@ -76,7 +76,7 @@ function ReminderForm({ onAddReminder }) {
         <div className="space-y-2">
           <label 
             htmlFor="data" 
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
           >
             <Calendar className="w-4 h-4" />
             Data
