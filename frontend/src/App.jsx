@@ -37,7 +37,36 @@ function App() {
       setLoading(true)
       setError(null)
       const data = await api.getAllReminders()
-      const sortedData = data.sort((a, b) => new Date(a.data) - new Date(b.data))
+      
+      // Ordenar por data e horário (mais próximo primeiro)
+      const sortedData = data.sort((a, b) => {
+        // Comparar datas primeiro
+        const dateA = new Date(a.data)
+        const dateB = new Date(b.data)
+        const dateDiff = dateA.getTime() - dateB.getTime()
+        
+        if (dateDiff !== 0) {
+          return dateDiff
+        }
+        
+        // Se a data for a mesma, comparar horários
+        const horarioA = a.horario ? (typeof a.horario === 'string' ? a.horario : a.horario.toString()) : null
+        const horarioB = b.horario ? (typeof b.horario === 'string' ? b.horario : b.horario.toString()) : null
+        
+        // Se nenhum tem horário, mantém ordem
+        if (!horarioA && !horarioB) return 0
+        
+        // Se só um tem horário, o sem horário vai primeiro (ou pode ajustar conforme preferência)
+        if (!horarioA) return -1
+        if (!horarioB) return 1
+        
+        // Comparar horários (formato HH:mm ou HH:mm:ss)
+        const timeA = horarioA.substring(0, 5) // Pega HH:mm
+        const timeB = horarioB.substring(0, 5)
+        
+        return timeA.localeCompare(timeB)
+      })
+      
       setReminders(sortedData)
     } catch (err) {
       setError('Erro ao carregar lembretes.')

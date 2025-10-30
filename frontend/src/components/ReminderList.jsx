@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import ReminderItem from './ReminderItem'
 
 function ReminderList({ reminders, onDeleteReminder }) {
-  // Agrupar lembretes por data
+  // Agrupar lembretes por data e ordenar por horário dentro de cada grupo
   const groupedReminders = useMemo(() => {
     const groups = {}
     
@@ -15,6 +15,27 @@ function ReminderList({ reminders, onDeleteReminder }) {
         groups[date] = []
       }
       groups[date].push(reminder)
+    })
+    
+    // Ordenar lembretes dentro de cada grupo por horário
+    Object.keys(groups).forEach(date => {
+      groups[date].sort((a, b) => {
+        const horarioA = a.horario ? (typeof a.horario === 'string' ? a.horario : a.horario.toString()) : null
+        const horarioB = b.horario ? (typeof b.horario === 'string' ? b.horario : b.horario.toString()) : null
+        
+        // Se nenhum tem horário, mantém ordem
+        if (!horarioA && !horarioB) return 0
+        
+        // Se só um tem horário, o sem horário vai primeiro
+        if (!horarioA) return -1
+        if (!horarioB) return 1
+        
+        // Comparar horários (formato HH:mm ou HH:mm:ss)
+        const timeA = horarioA.substring(0, 5) // Pega HH:mm
+        const timeB = horarioB.substring(0, 5)
+        
+        return timeA.localeCompare(timeB)
+      })
     })
     
     return groups
