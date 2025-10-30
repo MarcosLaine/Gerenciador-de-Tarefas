@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LembretesApi.Data;
 using LembretesApi.Models;
+using LembretesApi.DTOs;
 using System.Security.Claims;
 
 namespace LembretesApi.Controllers
@@ -58,11 +59,47 @@ namespace LembretesApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Lembrete>> Create(Lembrete lembrete)
+        public async Task<ActionResult<Lembrete>> Create(CreateLembreteDto dto)
         {
             try
             {
                 var usuarioId = ObterUsuarioId();
+                
+                // Criar objeto Lembrete
+                var lembrete = new Lembrete
+                {
+                    Nome = dto.Nome,
+                    Data = dto.Data,
+                    UsuarioId = usuarioId,
+                    DataCriacao = DateTime.UtcNow
+                };
+                
+                // Converter horário de string para TimeSpan se fornecido
+                if (!string.IsNullOrEmpty(dto.Horario))
+                {
+                    // Aceita formatos HH:mm ou HH:mm:ss
+                    var horarioStr = dto.Horario;
+                    if (!horarioStr.Contains(':'))
+                    {
+                        return BadRequest(new { message = "Formato de horário inválido. Use o formato HH:mm" });
+                    }
+                    
+                    // Se for HH:mm, adiciona :00 para tornar HH:mm:ss
+                    var parts = horarioStr.Split(':');
+                    if (parts.Length == 2)
+                    {
+                        horarioStr = $"{horarioStr}:00";
+                    }
+                    
+                    if (TimeSpan.TryParse(horarioStr, out var timeSpan))
+                    {
+                        lembrete.Horario = timeSpan;
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Formato de horário inválido. Use o formato HH:mm" });
+                    }
+                }
                 
                 // Converte data para UTC (PostgreSQL exige)
                 if (lembrete.Data.Kind == DateTimeKind.Unspecified)
@@ -73,10 +110,6 @@ namespace LembretesApi.Controllers
                 {
                     lembrete.Data = lembrete.Data.ToUniversalTime();
                 }
-                
-                lembrete.UsuarioId = usuarioId;
-                lembrete.DataCriacao = DateTime.UtcNow;
-                lembrete.Usuario = null; // Evita referência circular
 
                 _context.Lembretes.Add(lembrete);
                 await _context.SaveChangesAsync();

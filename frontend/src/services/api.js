@@ -44,7 +44,7 @@ export const api = {
     try {
       const body = { nome, data };
       if (horario) {
-        body.horario = horario;
+        body.horario = horario; // Envia como string no formato "HH:mm"
       }
       
       const response = await fetch(API_BASE_URL, {
@@ -60,7 +60,21 @@ export const api = {
       }
       
       if (!response.ok) {
-        throw new Error('Erro ao criar lembrete');
+        // Tentar obter mensagem de erro detalhada
+        let errorMessage = 'Erro ao criar lembrete';
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.errors) {
+            // Se houver erros de validação, construir mensagem
+            const validationErrors = Object.values(errorData.errors).flat();
+            errorMessage = validationErrors.join(', ');
+          }
+        } catch (e) {
+          // Se não conseguir parsear o erro, usar mensagem padrão
+        }
+        throw new Error(errorMessage);
       }
       
       return await response.json();

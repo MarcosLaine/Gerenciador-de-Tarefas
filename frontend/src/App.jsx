@@ -75,6 +75,7 @@ function App() {
       return true
     } catch (err) {
       console.error('Erro ao adicionar lembrete:', err)
+      setError(err.message || 'Erro ao adicionar lembrete')
       return false
     }
   }
