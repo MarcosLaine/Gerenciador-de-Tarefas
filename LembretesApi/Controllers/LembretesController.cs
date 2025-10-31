@@ -164,7 +164,9 @@ namespace LembretesApi.Controllers
                 {
                     // Calcular datas baseado na recorrência
                     var datas = new List<DateTime>();
-                    var dataAtual = dataProcessada.ToLocalTime(); // Converter para local para cálculos
+                    // Para cálculos mensais/anuais, usar a data base diretamente sem converter
+                    // Para manter a mesma hora/dia ao longo dos meses
+                    var dataBase = dataProcessada.ToLocalTime();
 
                     switch (dto.Recorrencia.ToLower())
                     {
@@ -172,7 +174,7 @@ namespace LembretesApi.Controllers
                             // Próximos 15 dias
                             for (int i = 0; i < 15; i++)
                             {
-                                var novaData = dataAtual.AddDays(i);
+                                var novaData = dataBase.AddDays(i);
                                 // Se tem horário, usar o horário especificado
                                 if (horarioTimeSpan.HasValue)
                                 {
@@ -205,7 +207,7 @@ namespace LembretesApi.Controllers
                             // Próximas 4 semanas
                             for (int i = 0; i < 4; i++)
                             {
-                                var novaData = dataAtual.AddDays(i * 7);
+                                var novaData = dataBase.AddDays(i * 7);
                                 if (horarioTimeSpan.HasValue)
                                 {
                                     novaData = new DateTime(
@@ -234,12 +236,16 @@ namespace LembretesApi.Controllers
                             break;
 
                         case "mensal":
-                            // Próximos 3 meses
+                            // Próximos 3 meses (incluindo o mês atual)
                             for (int i = 0; i < 3; i++)
                             {
-                                var novaData = dataAtual.AddMonths(i);
+                                // Adicionar meses primeiro, preservando dia e hora
+                                var novaData = dataBase.AddMonths(i);
+                                
+                                // Preservar horário especificado ou usar meio-dia
                                 if (horarioTimeSpan.HasValue)
                                 {
+                                    // Aplicar horário após AddMonths para garantir consistência
                                     novaData = new DateTime(
                                         novaData.Year,
                                         novaData.Month,
@@ -252,7 +258,7 @@ namespace LembretesApi.Controllers
                                 }
                                 else
                                 {
-                                    // Sem horário: usar meio-dia
+                                    // Se não tem horário, garantir que está no meio-dia
                                     novaData = new DateTime(
                                         novaData.Year,
                                         novaData.Month,
@@ -261,17 +267,22 @@ namespace LembretesApi.Controllers
                                         DateTimeKind.Local
                                     );
                                 }
+                                
                                 datas.Add(novaData.ToUniversalTime());
                             }
                             break;
 
                         case "anual":
-                            // Próximos 2 anos
+                            // Próximos 2 anos (incluindo o ano atual)
                             for (int i = 0; i < 2; i++)
                             {
-                                var novaData = dataAtual.AddYears(i);
+                                // Adicionar anos, preservando dia e hora
+                                var novaData = dataBase.AddYears(i);
+                                
+                                // Preservar horário especificado ou usar meio-dia
                                 if (horarioTimeSpan.HasValue)
                                 {
+                                    // Aplicar horário após AddYears para garantir consistência
                                     novaData = new DateTime(
                                         novaData.Year,
                                         novaData.Month,
@@ -284,7 +295,7 @@ namespace LembretesApi.Controllers
                                 }
                                 else
                                 {
-                                    // Sem horário: usar meio-dia
+                                    // Se não tem horário, garantir meio-dia
                                     novaData = new DateTime(
                                         novaData.Year,
                                         novaData.Month,
@@ -293,6 +304,7 @@ namespace LembretesApi.Controllers
                                         DateTimeKind.Local
                                     );
                                 }
+                                
                                 datas.Add(novaData.ToUniversalTime());
                             }
                             break;
@@ -308,9 +320,16 @@ namespace LembretesApi.Controllers
                         _context.Lembretes.Add(lembrete);
                         lembretesCriados.Add(lembrete);
                     }
+                    
+                    // Debug: verificar quantos lembretes foram criados
+                    // System.Diagnostics.Debug.WriteLine($"Criados {lembretesCriados.Count} lembretes para recorrência {dto.Recorrencia}");
                 }
 
                 await _context.SaveChangesAsync();
+                
+                // Após salvar, verificar se todos foram persistidos
+                // var totalSalvo = await _context.Lembretes.CountAsync(l => l.UsuarioId == usuarioId && l.Nome == dto.Nome);
+                // System.Diagnostics.Debug.WriteLine($"Total de lembretes salvos: {totalSalvo}");
 
                 // Retornar todos os lembretes criados
                 var lembretesRetorno = lembretesCriados.Select(l => new
