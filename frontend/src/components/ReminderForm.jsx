@@ -352,30 +352,30 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
           {customCategories.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {customCategories.map((cat) => (
-                <button
+                <div
                   key={cat}
-                  type="button"
                   onClick={() => setCategoria(cat)}
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-colors ${
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
                     categoria === cat
                       ? 'bg-purple-600 dark:bg-purple-700 text-white border-purple-700 dark:border-purple-600'
                       : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-900/50'
                   }`}
                   title={`Selecionar categoria: ${cat}`}
                 >
-                  {cat}
+                  <span className="select-none">{cat}</span>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleRemoveCustomCategory(cat)
                     }}
-                    className="hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    className="hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center justify-center"
                     title="Remover categoria"
+                    onMouseDown={(e) => e.stopPropagation()}
                   >
                     <X className="w-3 h-3" />
                   </button>
-                </button>
+                </div>
               ))}
             </div>
           )}
