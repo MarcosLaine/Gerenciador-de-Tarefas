@@ -109,16 +109,24 @@ function App() {
 
   const [editingReminder, setEditingReminder] = useState(null)
 
-  const handleAddReminder = async (nome, data, horario, descricao, categoria, id = null) => {
+  const handleAddReminder = async (nome, data, horario, descricao, categoria, recorrencia, id = null) => {
     try {
       if (id) {
-        // Atualizar lembrete existente
+        // Atualizar lembrete existente (recorrência não pode ser alterada ao editar)
         await api.updateReminder(id, nome, data, horario, descricao, categoria)
         setEditingReminder(null) // Limpar modo de edição
         await loadReminders()
       } else {
-        // Criar novo lembrete
-        await api.createReminder(nome, data, horario, descricao, categoria)
+        // Criar novo lembrete (pode retornar um ou múltiplos lembretes se houver recorrência)
+        const result = await api.createReminder(nome, data, horario, descricao, categoria, recorrencia)
+        
+        // Se retornou múltiplos lembretes (array), mostrar mensagem de sucesso
+        if (Array.isArray(result) && result.length > 1) {
+          // Não mostrar alert aqui, pois loadReminders() já vai atualizar a lista
+          // Apenas log para debug
+          console.log(`✅ ${result.length} lembretes criados com recorrência`)
+        }
+        
         await loadReminders()
       }
       return true

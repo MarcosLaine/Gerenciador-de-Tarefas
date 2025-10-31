@@ -1,4 +1,4 @@
-import { Calendar, Clock, FileText, Plus, Tag, X } from 'lucide-react'
+import { Calendar, Clock, FileText, Plus, Repeat, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 // Carregar categorias personalizadas do localStorage
@@ -26,6 +26,7 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
   const [horario, setHorario] = useState(editingReminder?.horario ? editingReminder.horario.substring(0, 5) : '')
   const [descricao, setDescricao] = useState(editingReminder?.descricao || '')
   const [categoria, setCategoria] = useState(editingReminder?.categoria || '')
+  const [recorrencia, setRecorrencia] = useState(editingReminder?.recorrencia || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customCategories, setCustomCategories] = useState(loadCustomCategories)
   const [novaCategoria, setNovaCategoria] = useState('')
@@ -59,12 +60,14 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       setHorario(horarioValue)
       setDescricao(editingReminder.descricao || '')
       setCategoria(editingReminder.categoria || '')
+      setRecorrencia(editingReminder.recorrencia || '')
     } else {
       setNome('')
       setData('')
       setHorario('')
       setDescricao('')
       setCategoria('')
+      setRecorrencia('')
     }
   }, [editingReminder])
 
@@ -134,6 +137,7 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       horario || null, 
       descricao || null,
       categoria || null,
+      recorrencia || null,
       editingReminder?.id
     )
     
@@ -144,6 +148,7 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
       setHorario('')
       setDescricao('')
       setCategoria('')
+      setRecorrencia('')
       
       // Feedback visual de sucesso
       const button = document.querySelector('button[type="submit"]')
@@ -363,6 +368,35 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
                 </span>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Campo Recorrência (Opcional) */}
+        <div className="space-y-2">
+          <label 
+            htmlFor="recorrencia" 
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
+          >
+            <Repeat className="w-4 h-4" />
+            Recorrência <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(opcional)</span>
+          </label>
+          <select
+            id="recorrencia"
+            value={recorrencia}
+            onChange={(e) => setRecorrencia(e.target.value)}
+            className="input-field"
+            disabled={!!editingReminder}
+          >
+            <option value="">Sem recorrência</option>
+            <option value="diario">Diário (próximos 15 dias)</option>
+            <option value="semanal">Semanal (próximas 4 semanas)</option>
+            <option value="mensal">Mensal (próximos 3 meses)</option>
+            <option value="anual">Anual (próximos 2 anos)</option>
+          </select>
+          {editingReminder && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              ℹ️ A recorrência não pode ser alterada ao editar um lembrete
+            </p>
           )}
         </div>
 

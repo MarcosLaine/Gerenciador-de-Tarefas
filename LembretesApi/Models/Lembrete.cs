@@ -9,6 +9,7 @@ namespace LembretesApi.Models
         public DateTime Data { get; set; }
         public TimeSpan? Horario { get; set; } // Horário opcional
         public bool Concluido { get; set; } = false; // Status de conclusão
+        public string? Recorrencia { get; set; } // Recorrência: "diario", "semanal", "mensal", "anual" ou null
         public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
         
         // Relacionamento com Usuário

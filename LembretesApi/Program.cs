@@ -272,6 +272,22 @@ using (var scope = app.Services.CreateScope())
                 logger.LogInformation("✅ Coluna Categoria adicionada com sucesso!");
             }
             
+            // Verificar e adicionar Recorrencia
+            var checkRecorrenciaSql = @"
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'Lembretes' AND column_name = 'Recorrencia'";
+            
+            var recorrenciaExists = context.Database.SqlQueryRaw<string>(checkRecorrenciaSql).Any();
+            
+            if (!recorrenciaExists)
+            {
+                logger.LogWarning("⚠️ Coluna Recorrencia não encontrada. Criando...");
+                var addRecorrenciaSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Recorrencia"" text NULL";
+                context.Database.ExecuteSqlRaw(addRecorrenciaSql);
+                logger.LogInformation("✅ Coluna Recorrencia adicionada com sucesso!");
+            }
+            
             logger.LogInformation("✅ Todas as colunas verificadas/criadas.");
         }
         catch (Exception colEx)

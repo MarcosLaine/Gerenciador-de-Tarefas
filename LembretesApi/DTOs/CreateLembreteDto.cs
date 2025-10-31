@@ -15,6 +15,8 @@ namespace LembretesApi.DTOs
         public DateTime Data { get; set; }
         
         public string? Horario { get; set; } // Recebe como string no formato "HH:mm" ou "HH:mm:ss"
+        
+        public string? Recorrencia { get; set; } // Recorrência: "diario", "semanal", "mensal", "anual" ou null
     }
 
     public class UpdateLembreteDto

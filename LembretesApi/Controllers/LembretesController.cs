@@ -45,6 +45,7 @@ namespace LembretesApi.Controllers
                         l.Data,
                         l.Horario,
                         l.Concluido,
+                        l.Recorrencia,
                         l.DataCriacao,
                         l.UsuarioId
                     })
@@ -133,34 +134,207 @@ namespace LembretesApi.Controllers
                     dataProcessada = localDate.ToUniversalTime();
                 }
                 
-                // Criar objeto Lembrete
-                var lembrete = new Lembrete
+                // Função auxiliar para criar um lembrete
+                Lembrete CriarLembrete(DateTime data)
                 {
-                    Nome = dto.Nome,
-                    Descricao = dto.Descricao,
-                    Categoria = dto.Categoria,
-                    Data = dataProcessada,
-                    Horario = horarioTimeSpan,
-                    UsuarioId = usuarioId,
-                    DataCriacao = DateTime.UtcNow
-                };
+                    return new Lembrete
+                    {
+                        Nome = dto.Nome,
+                        Descricao = dto.Descricao,
+                        Categoria = dto.Categoria,
+                        Data = data,
+                        Horario = horarioTimeSpan,
+                        Recorrencia = dto.Recorrencia,
+                        UsuarioId = usuarioId,
+                        DataCriacao = DateTime.UtcNow
+                    };
+                }
 
-                _context.Lembretes.Add(lembrete);
+                // Lista para armazenar todos os lembretes criados
+                var lembretesCriados = new List<Lembrete>();
+
+                // Se não há recorrência, criar apenas um lembrete
+                if (string.IsNullOrEmpty(dto.Recorrencia))
+                {
+                    var lembrete = CriarLembrete(dataProcessada);
+                    _context.Lembretes.Add(lembrete);
+                    lembretesCriados.Add(lembrete);
+                }
+                else
+                {
+                    // Calcular datas baseado na recorrência
+                    var datas = new List<DateTime>();
+                    var dataAtual = dataProcessada.ToLocalTime(); // Converter para local para cálculos
+
+                    switch (dto.Recorrencia.ToLower())
+                    {
+                        case "diario":
+                            // Próximos 15 dias
+                            for (int i = 0; i < 15; i++)
+                            {
+                                var novaData = dataAtual.AddDays(i);
+                                // Se tem horário, usar o horário especificado
+                                if (horarioTimeSpan.HasValue)
+                                {
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        horarioTimeSpan.Value.Hours,
+                                        horarioTimeSpan.Value.Minutes,
+                                        0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                else
+                                {
+                                    // Sem horário: usar meio-dia
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        12, 0, 0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                datas.Add(novaData.ToUniversalTime());
+                            }
+                            break;
+
+                        case "semanal":
+                            // Próximas 4 semanas
+                            for (int i = 0; i < 4; i++)
+                            {
+                                var novaData = dataAtual.AddDays(i * 7);
+                                if (horarioTimeSpan.HasValue)
+                                {
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        horarioTimeSpan.Value.Hours,
+                                        horarioTimeSpan.Value.Minutes,
+                                        0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                else
+                                {
+                                    // Sem horário: usar meio-dia
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        12, 0, 0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                datas.Add(novaData.ToUniversalTime());
+                            }
+                            break;
+
+                        case "mensal":
+                            // Próximos 3 meses
+                            for (int i = 0; i < 3; i++)
+                            {
+                                var novaData = dataAtual.AddMonths(i);
+                                if (horarioTimeSpan.HasValue)
+                                {
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        horarioTimeSpan.Value.Hours,
+                                        horarioTimeSpan.Value.Minutes,
+                                        0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                else
+                                {
+                                    // Sem horário: usar meio-dia
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        12, 0, 0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                datas.Add(novaData.ToUniversalTime());
+                            }
+                            break;
+
+                        case "anual":
+                            // Próximos 2 anos
+                            for (int i = 0; i < 2; i++)
+                            {
+                                var novaData = dataAtual.AddYears(i);
+                                if (horarioTimeSpan.HasValue)
+                                {
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        horarioTimeSpan.Value.Hours,
+                                        horarioTimeSpan.Value.Minutes,
+                                        0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                else
+                                {
+                                    // Sem horário: usar meio-dia
+                                    novaData = new DateTime(
+                                        novaData.Year,
+                                        novaData.Month,
+                                        novaData.Day,
+                                        12, 0, 0,
+                                        DateTimeKind.Local
+                                    );
+                                }
+                                datas.Add(novaData.ToUniversalTime());
+                            }
+                            break;
+
+                        default:
+                            return BadRequest(new { message = "Recorrência inválida. Use: diario, semanal, mensal ou anual" });
+                    }
+
+                    // Criar um lembrete para cada data
+                    foreach (var data in datas)
+                    {
+                        var lembrete = CriarLembrete(data);
+                        _context.Lembretes.Add(lembrete);
+                        lembretesCriados.Add(lembrete);
+                    }
+                }
+
                 await _context.SaveChangesAsync();
 
-                // Retorna apenas os dados necessários (sem Usuario)
-                return CreatedAtAction(nameof(Get), new { id = lembrete.Id }, new 
+                // Retornar todos os lembretes criados
+                var lembretesRetorno = lembretesCriados.Select(l => new
                 {
-                    lembrete.Id,
-                    lembrete.Nome,
-                    lembrete.Descricao,
-                    lembrete.Categoria,
-                    lembrete.Data,
-                    lembrete.Horario,
-                    lembrete.Concluido,
-                    lembrete.DataCriacao,
-                    lembrete.UsuarioId
-                });
+                    l.Id,
+                    l.Nome,
+                    l.Descricao,
+                    l.Categoria,
+                    l.Data,
+                    l.Horario,
+                    l.Concluido,
+                    l.Recorrencia,
+                    l.DataCriacao,
+                    l.UsuarioId
+                }).ToList();
+
+                // Se criou apenas um, retorna CreatedAtAction
+                if (lembretesRetorno.Count == 1)
+                {
+                    return CreatedAtAction(nameof(Get), new { id = lembretesRetorno.First().Id }, lembretesRetorno.First());
+                }
+
+                // Se criou vários, retorna Ok com a lista
+                return Ok(lembretesRetorno);
             }
             catch (Exception ex)
             {
@@ -302,6 +476,7 @@ namespace LembretesApi.Controllers
                     lembrete.Data,
                     lembrete.Horario,
                     lembrete.Concluido,
+                    lembrete.Recorrencia,
                     lembrete.DataCriacao,
                     lembrete.UsuarioId
                 });
@@ -342,6 +517,7 @@ namespace LembretesApi.Controllers
                     lembrete.Data,
                     lembrete.Horario,
                     lembrete.Concluido,
+                    lembrete.Recorrencia,
                     lembrete.DataCriacao,
                     lembrete.UsuarioId
                 });

@@ -40,7 +40,7 @@ export const api = {
   },
 
   // Criar novo lembrete
-  async createReminder(nome, data, horario = null, descricao = null, categoria = null) {
+  async createReminder(nome, data, horario = null, descricao = null, categoria = null, recorrencia = null) {
     try {
       // Garantir que a data seja enviada com horário no meio do dia para evitar problemas de timezone
       // Se não tiver horário, usa 12:00 para garantir que a data não mude ao converter timezones
@@ -62,6 +62,9 @@ export const api = {
       }
       if (categoria) {
         body.categoria = categoria;
+      }
+      if (recorrencia) {
+        body.recorrencia = recorrencia;
       }
       
       const response = await fetch(API_BASE_URL, {
@@ -94,7 +97,10 @@ export const api = {
         throw new Error(errorMessage);
       }
       
-      return await response.json();
+      const result = await response.json();
+      // Se retornou um array (múltiplos lembretes), retornar o array
+      // Se retornou um objeto único, envolver em array para consistência
+      return Array.isArray(result) ? result : [result];
     } catch (error) {
       console.error('Erro ao criar lembrete:', error);
       throw error;

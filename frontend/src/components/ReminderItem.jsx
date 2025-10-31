@@ -1,5 +1,5 @@
 import { addHours, isPast, isToday, parseISO } from 'date-fns'
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Clock, Edit, Tag, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Clock, Edit, Repeat, Tag, X } from 'lucide-react'
 import { useState } from 'react'
 
 // Função para obter cor da categoria
@@ -166,6 +166,15 @@ function ReminderItem({ reminder, onDelete, onEdit, onToggleComplete, index }) {
                 <span className={`text-xs px-2 py-0.5 rounded-full border ${getCategoryColor(reminder.categoria)} flex items-center gap-1`}>
                   <Tag className="w-3 h-3" />
                   {reminder.categoria}
+                </span>
+              )}
+              {reminder.recorrencia && (
+                <span className="text-xs px-2 py-0.5 rounded-full border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 flex items-center gap-1">
+                  <Repeat className="w-3 h-3" />
+                  {reminder.recorrencia === 'diario' ? 'Diário' : 
+                   reminder.recorrencia === 'semanal' ? 'Semanal' : 
+                   reminder.recorrencia === 'mensal' ? 'Mensal' : 
+                   reminder.recorrencia === 'anual' ? 'Anual' : reminder.recorrencia}
                 </span>
               )}
             </div>
