@@ -164,9 +164,9 @@ namespace LembretesApi.Controllers
                 {
                     // Calcular datas baseado na recorrência
                     var datas = new List<DateTime>();
-                    // Para cálculos mensais/anuais, usar a data base diretamente sem converter
+                    // Para cálculos mensais/anuais, usar a data processada convertida para local
                     // Para manter a mesma hora/dia ao longo dos meses
-                    var dataBase = dataProcessada.ToLocalTime();
+                    var dataLocal = dataProcessada.ToLocalTime();
 
                     switch (dto.Recorrencia.ToLower())
                     {
@@ -174,7 +174,7 @@ namespace LembretesApi.Controllers
                             // Próximos 15 dias
                             for (int i = 0; i < 15; i++)
                             {
-                                var novaData = dataBase.AddDays(i);
+                                var novaData = dataLocal.AddDays(i);
                                 // Se tem horário, usar o horário especificado
                                 if (horarioTimeSpan.HasValue)
                                 {
@@ -207,7 +207,7 @@ namespace LembretesApi.Controllers
                             // Próximas 4 semanas
                             for (int i = 0; i < 4; i++)
                             {
-                                var novaData = dataBase.AddDays(i * 7);
+                                var novaData = dataLocal.AddDays(i * 7);
                                 if (horarioTimeSpan.HasValue)
                                 {
                                     novaData = new DateTime(
@@ -240,7 +240,7 @@ namespace LembretesApi.Controllers
                             for (int i = 0; i < 3; i++)
                             {
                                 // Adicionar meses primeiro, preservando dia e hora
-                                var novaData = dataBase.AddMonths(i);
+                                var novaData = dataLocal.AddMonths(i);
                                 
                                 // Preservar horário especificado ou usar meio-dia
                                 if (horarioTimeSpan.HasValue)
@@ -277,7 +277,7 @@ namespace LembretesApi.Controllers
                             for (int i = 0; i < 2; i++)
                             {
                                 // Adicionar anos, preservando dia e hora
-                                var novaData = dataBase.AddYears(i);
+                                var novaData = dataLocal.AddYears(i);
                                 
                                 // Preservar horário especificado ou usar meio-dia
                                 if (horarioTimeSpan.HasValue)
