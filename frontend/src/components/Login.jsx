@@ -31,7 +31,7 @@ function Login({ onLogin, onToggleMode }) {
             <LogIn className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-            Bem-vindo de volta!
+            Bem-Vindo!
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
             Entre para acessar seus lembretes
