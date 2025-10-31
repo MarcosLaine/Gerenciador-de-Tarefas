@@ -1,18 +1,6 @@
 import { Calendar, Clock, FileText, Plus, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-const CATEGORIAS_PREDEFINIDAS = [
-  { value: '', label: 'Sem categoria' },
-  { value: 'Trabalho', label: '💼 Trabalho' },
-  { value: 'Pessoal', label: '👤 Pessoal' },
-  { value: 'Saúde', label: '🏥 Saúde' },
-  { value: 'Estudos', label: '📚 Estudos' },
-  { value: 'Lazer', label: '🎮 Lazer' },
-  { value: 'Compras', label: '🛒 Compras' },
-  { value: 'Família', label: '👨‍👩‍👧‍👦 Família' },
-  { value: 'Outros', label: '📌 Outros' },
-]
-
 // Carregar categorias personalizadas do localStorage
 const loadCustomCategories = () => {
   try {
@@ -84,13 +72,6 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
   const handleAddCustomCategory = () => {
     const trimmed = novaCategoria.trim()
     if (!trimmed) return
-    
-    // Verificar se já existe nas predefinidas
-    const existsPredefined = CATEGORIAS_PREDEFINIDAS.some(cat => cat.value.toLowerCase() === trimmed.toLowerCase())
-    if (existsPredefined) {
-      alert('Esta categoria já existe nas categorias predefinidas!')
-      return
-    }
     
     // Verificar se já existe nas personalizadas
     const existsCustom = customCategories.some(cat => cat.toLowerCase() === trimmed.toLowerCase())
@@ -304,27 +285,25 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
             )}
           </div>
           
-          <select
-            id="categoria"
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
-            className="input-field"
-          >
-            {CATEGORIAS_PREDEFINIDAS.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-            {customCategories.length > 0 && (
-              <optgroup label="Categorias Personalizadas">
-                {customCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
+          {customCategories.length > 0 ? (
+            <select
+              id="categoria"
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Sem categoria</option>
+              {customCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400 italic p-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+              Nenhuma categoria criada ainda. Use o botão acima para criar uma.
+            </div>
+          )}
 
           {/* Adicionar nova categoria */}
           {showAddCategoria && (

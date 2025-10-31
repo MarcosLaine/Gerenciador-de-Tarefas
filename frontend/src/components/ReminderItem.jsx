@@ -3,20 +3,9 @@ import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Clock, Edit, Tag, X 
 import { useState } from 'react'
 
 // Função para obter cor da categoria
+// Todas as categorias usam a mesma cor padrão (indigo)
 const getCategoryColor = (categoria) => {
-  const colors = {
-    'Trabalho': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
-    'Pessoal': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700',
-    'Saúde': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
-    'Estudos': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
-    'Lazer': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
-    'Compras': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700',
-    'Família': 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-700',
-    'Outros': 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
-  }
-  
-  // Se a categoria não está nas predefinidas, usa uma cor padrão para personalizadas
-  return colors[categoria] || 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700'
+  return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700'
 }
 
 // Função para verificar se lembrete está próximo (hoje ou próximas 24h)
