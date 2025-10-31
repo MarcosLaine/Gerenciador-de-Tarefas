@@ -123,7 +123,7 @@ function Dashboard({ reminders }) {
   ]
 
   return (
-    <div className="glass-effect rounded-2xl p-6 shadow-2xl">
+    <div className="glass-effect rounded-2xl p-6 shadow-2xl h-full flex flex-col">
       <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
         <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
         Dashboard
@@ -154,12 +154,12 @@ function Dashboard({ reminders }) {
 
       {/* Estatísticas por Categoria */}
       {Object.keys(stats.porCategoria).length > 0 && (
-        <div>
+        <div className="flex-1 flex flex-col min-h-0">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
             <Tag className="w-4 h-4" />
             Por Categoria
           </h3>
-          <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+          <div className="space-y-2 flex-1 overflow-y-auto pr-2">
             {Object.entries(stats.porCategoria).map(([categoria, dados]) => {
               const porcentagem = dados.total > 0 ? Math.round((dados.concluidos / dados.total) * 100) : 0
               return (

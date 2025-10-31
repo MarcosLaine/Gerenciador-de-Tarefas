@@ -185,7 +185,7 @@ function ReminderForm({ onAddReminder, editingReminder = null, onCancelEdit = nu
   }
 
   return (
-    <div className="glass-effect rounded-2xl p-8 shadow-2xl">
+    <div className="glass-effect rounded-2xl p-8 shadow-2xl h-full flex flex-col">
       <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
         <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         {editingReminder ? 'Editar Lembrete' : 'Criar Novo Lembrete'}
