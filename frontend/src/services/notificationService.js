@@ -233,28 +233,62 @@ class NotificationService {
   // Enviar subscription para o backend
   async sendSubscriptionToBackend(subscription, token) {
     try {
+      console.log('[NotificationService] 📤 Enviando subscription para o backend...');
+      console.log('[NotificationService] Endpoint:', subscription.endpoint);
+      
+      const p256dhKey = subscription.getKey('p256dh');
+      const authKey = subscription.getKey('auth');
+      
+      const p256dhBase64 = this.arrayBufferToBase64(p256dhKey);
+      const authBase64 = this.arrayBufferToBase64(authKey);
+      
+      console.log('[NotificationService] P256dh (primeiros 30 chars):', p256dhBase64.substring(0, 30) + '...');
+      console.log('[NotificationService] Auth (primeiros 30 chars):', authBase64.substring(0, 30) + '...');
+
+      const subscriptionData = {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: p256dhBase64,
+          auth: authBase64
+        }
+      };
+
+      console.log('[NotificationService] Dados da subscription:', {
+        endpoint: subscriptionData.endpoint,
+        keysLength: {
+          p256dh: subscriptionData.keys.p256dh.length,
+          auth: subscriptionData.keys.auth.length
+        }
+      });
+
       const response = await fetch(`${API_BASE_URL}/notifications/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: this.arrayBufferToBase64(subscription.getKey('p256dh')),
-            auth: this.arrayBufferToBase64(subscription.getKey('auth'))
-          }
-        })
+        body: JSON.stringify(subscriptionData)
       });
 
+      const responseText = await response.text();
+      console.log('[NotificationService] Resposta do backend:', response.status, responseText);
+
       if (!response.ok) {
-        throw new Error('Erro ao enviar subscription para o backend');
+        let errorMessage = 'Erro ao enviar subscription para o backend';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = responseText || `Erro ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      const data = responseText ? JSON.parse(responseText) : {};
+      console.log('[NotificationService] ✅ Subscription enviada com sucesso:', data);
+      return data;
     } catch (error) {
-      console.error('[NotificationService] Erro ao enviar subscription:', error);
+      console.error('[NotificationService] ❌ Erro ao enviar subscription:', error);
       throw error;
     }
   }

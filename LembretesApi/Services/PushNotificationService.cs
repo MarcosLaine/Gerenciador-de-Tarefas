@@ -69,6 +69,8 @@ namespace LembretesApi.Services
         {
             try
             {
+                _logger.LogInformation($"📨 Iniciando envio de notificação para usuário {usuarioId}");
+
                 using var scope = _serviceProvider.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -77,10 +79,19 @@ namespace LembretesApi.Services
                     .Where(ps => ps.UsuarioId == usuarioId)
                     .ToListAsync();
 
+                _logger.LogInformation($"🔍 Encontradas {subscriptions.Count} subscription(s) para o usuário {usuarioId}");
+
                 if (!subscriptions.Any())
                 {
-                    _logger.LogInformation($"Nenhuma subscription encontrada para o usuário {usuarioId}");
+                    _logger.LogWarning($"⚠️ Nenhuma subscription encontrada para o usuário {usuarioId}");
                     return;
+                }
+
+                // Validar chaves VAPID antes de usar
+                if (string.IsNullOrWhiteSpace(_vapidPublicKey) || string.IsNullOrWhiteSpace(_vapidPrivateKey))
+                {
+                    _logger.LogError("❌ Chaves VAPID não configuradas corretamente");
+                    throw new InvalidOperationException("Chaves VAPID não configuradas");
                 }
 
                 var pushClient = new WebPushClient();
@@ -96,23 +107,24 @@ namespace LembretesApi.Services
                     data = data ?? new { }
                 });
 
+                _logger.LogInformation($"📦 Payload preparado: {payload.Substring(0, Math.Min(100, payload.Length))}...");
+
+                var successCount = 0;
+                var errorCount = 0;
+
                 // Enviar notificação para cada subscription
                 foreach (var subscription in subscriptions)
                 {
                     try
                     {
+                        _logger.LogInformation($"📤 Tentando enviar para endpoint: {subscription.Endpoint.Substring(0, Math.Min(50, subscription.Endpoint.Length))}...");
+                        _logger.LogInformation($"🔑 P256dh: {subscription.P256dh.Substring(0, Math.Min(20, subscription.P256dh.Length))}..., Auth: {subscription.Auth.Substring(0, Math.Min(20, subscription.Auth.Length))}...");
+
                         var pushSubscription = new WebPush.PushSubscription(
                             subscription.Endpoint,
                             subscription.P256dh,
                             subscription.Auth
                         );
-
-                        // Validar chaves VAPID antes de usar
-                        if (string.IsNullOrWhiteSpace(_vapidPublicKey) || string.IsNullOrWhiteSpace(_vapidPrivateKey))
-                        {
-                            _logger.LogError("Chaves VAPID não configuradas corretamente");
-                            throw new InvalidOperationException("Chaves VAPID não configuradas");
-                        }
 
                         var vapidDetails = new VapidDetails(
                             _vapidSubject,
@@ -120,14 +132,16 @@ namespace LembretesApi.Services
                             _vapidPrivateKey
                         );
 
-                        _logger.LogInformation($"📤 Enviando notificação - Subject: {_vapidSubject}, PublicKey: {_vapidPublicKey.Substring(0, Math.Min(20, _vapidPublicKey.Length))}..., Endpoint: {subscription.Endpoint.Substring(0, Math.Min(50, subscription.Endpoint.Length))}...");
+                        _logger.LogInformation($"🔐 VAPID Details - Subject: {_vapidSubject}, PublicKey: {_vapidPublicKey.Substring(0, Math.Min(20, _vapidPublicKey.Length))}...");
 
                         await pushClient.SendNotificationAsync(pushSubscription, payload, vapidDetails);
-                        _logger.LogInformation($"Notificação enviada com sucesso para {subscription.Endpoint}");
+                        _logger.LogInformation($"✅ Notificação enviada com sucesso para {subscription.Endpoint.Substring(0, Math.Min(50, subscription.Endpoint.Length))}...");
+                        successCount++;
                     }
                     catch (WebPushException ex)
                     {
-                        _logger.LogWarning(ex, $"Erro ao enviar notificação para {subscription.Endpoint}: {ex.Message} (Status: {ex.StatusCode})");
+                        errorCount++;
+                        _logger.LogWarning(ex, $"⚠️ Erro ao enviar notificação para {subscription.Endpoint.Substring(0, Math.Min(50, subscription.Endpoint.Length))}...: {ex.Message} (Status: {ex.StatusCode})");
 
                         // Se a subscription expirou ou é inválida, remover do banco
                         if (ex.StatusCode == System.Net.HttpStatusCode.Gone ||
@@ -135,11 +149,11 @@ namespace LembretesApi.Services
                             ex.StatusCode == System.Net.HttpStatusCode.BadRequest ||
                             ex.StatusCode == System.Net.HttpStatusCode.Unauthorized) // 401 indica subscription inválida ou chaves VAPID incorretas
                         {
-                            _logger.LogInformation($"Removendo subscription inválida/expirada (Status {ex.StatusCode}): {subscription.Endpoint}");
+                            _logger.LogInformation($"🗑️ Removendo subscription inválida/expirada (Status {ex.StatusCode}): {subscription.Endpoint.Substring(0, Math.Min(50, subscription.Endpoint.Length))}...");
                             
                             if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                             {
-                                _logger.LogWarning("Erro 401: Subscription foi criada com chaves VAPID diferentes. O usuário precisa reativar as notificações.");
+                                _logger.LogWarning("⚠️ Erro 401: Subscription foi criada com chaves VAPID diferentes. O usuário precisa reativar as notificações.");
                             }
                             
                             context.PushSubscriptions.Remove(subscription);
@@ -148,13 +162,17 @@ namespace LembretesApi.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"Erro inesperado ao enviar notificação para {subscription.Endpoint}");
+                        errorCount++;
+                        _logger.LogError(ex, $"❌ Erro inesperado ao enviar notificação para {subscription.Endpoint.Substring(0, Math.Min(50, subscription.Endpoint.Length))}...");
                     }
                 }
+
+                _logger.LogInformation($"📊 Resultado do envio: {successCount} sucesso(s), {errorCount} erro(s)");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erro ao enviar notificação para usuário {usuarioId}");
+                _logger.LogError(ex, $"❌ Erro ao enviar notificação para usuário {usuarioId}: {ex.Message}");
+                throw; // Re-throw para que o controller possa tratar
             }
         }
 

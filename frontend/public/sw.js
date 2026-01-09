@@ -80,13 +80,14 @@ self.addEventListener('fetch', (event) => {
 
 // Receber mensagens push
 self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push recebido:', event);
+  console.log('[Service Worker] 📬 Push recebido:', event);
+  console.log('[Service Worker] Event.data:', event.data);
   
   let notificationData = {
     title: 'Lembrete',
     body: 'Você tem um lembrete!',
-      icon: undefined,
-      badge: undefined,
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
     tag: 'lembrete-notification',
     requireInteraction: false,
     data: {}
@@ -94,7 +95,10 @@ self.addEventListener('push', (event) => {
 
   if (event.data) {
     try {
+      console.log('[Service Worker] Tentando fazer parse do JSON...');
       const data = event.data.json();
+      console.log('[Service Worker] ✅ Dados parseados:', data);
+      
       notificationData = {
         title: data.title || 'Lembrete',
         body: data.body || 'Você tem um lembrete!',
@@ -105,10 +109,20 @@ self.addEventListener('push', (event) => {
         data: data.data || {}
       };
     } catch (e) {
-      console.error('[Service Worker] Erro ao parsear dados do push:', e);
-      notificationData.body = event.data.text() || 'Você tem um lembrete!';
+      console.error('[Service Worker] ❌ Erro ao parsear dados do push:', e);
+      try {
+        const text = event.data.text();
+        console.log('[Service Worker] Dados como texto:', text);
+        notificationData.body = text || 'Você tem um lembrete!';
+      } catch (textError) {
+        console.error('[Service Worker] ❌ Erro ao ler dados como texto:', textError);
+      }
     }
+  } else {
+    console.warn('[Service Worker] ⚠️ Event.data está vazio ou null');
   }
+
+  console.log('[Service Worker] 📤 Exibindo notificação:', notificationData);
 
   event.waitUntil(
     self.registration.showNotification(notificationData.title, {
@@ -130,6 +144,10 @@ self.addEventListener('push', (event) => {
           title: 'Fechar'
         }
       ]
+    }).then(() => {
+      console.log('[Service Worker] ✅ Notificação exibida com sucesso!');
+    }).catch((error) => {
+      console.error('[Service Worker] ❌ Erro ao exibir notificação:', error);
     })
   );
 });

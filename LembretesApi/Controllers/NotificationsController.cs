@@ -39,8 +39,30 @@ namespace LembretesApi.Controllers
             {
                 var usuarioId = ObterUsuarioId();
 
+                // Validações
+                if (dto == null)
+                {
+                    _logger.LogWarning("⚠️ DTO de subscription é null");
+                    return BadRequest(new { message = "Dados de subscription inválidos" });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Endpoint))
+                {
+                    _logger.LogWarning("⚠️ Endpoint está vazio");
+                    return BadRequest(new { message = "Endpoint é obrigatório" });
+                }
+
+                if (dto.Keys == null || string.IsNullOrWhiteSpace(dto.Keys.P256dh) || string.IsNullOrWhiteSpace(dto.Keys.Auth))
+                {
+                    _logger.LogWarning("⚠️ Chaves de subscription estão vazias ou inválidas");
+                    return BadRequest(new { message = "Chaves de subscription são obrigatórias" });
+                }
+
                 // Log para debug
-                _logger.LogInformation($"📥 Recebendo subscription - UsuarioId: {usuarioId}, Endpoint: {dto.Endpoint?.Substring(0, Math.Min(50, dto.Endpoint?.Length ?? 0))}...");
+                _logger.LogInformation($"📥 Recebendo subscription - UsuarioId: {usuarioId}");
+                _logger.LogInformation($"📍 Endpoint: {dto.Endpoint.Substring(0, Math.Min(50, dto.Endpoint.Length))}...");
+                _logger.LogInformation($"🔑 P256dh (primeiros 30 chars): {dto.Keys.P256dh.Substring(0, Math.Min(30, dto.Keys.P256dh.Length))}...");
+                _logger.LogInformation($"🔐 Auth (primeiros 30 chars): {dto.Keys.Auth.Substring(0, Math.Min(30, dto.Keys.Auth.Length))}...");
 
                 // Verificar se já existe subscription para este usuário
                 var existingSubscription = await _context.PushSubscriptions
@@ -71,6 +93,7 @@ namespace LembretesApi.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+                _logger.LogInformation($"💾 Subscription salva no banco de dados para usuário {usuarioId}");
 
                 return Ok(new { message = "Subscription registrada com sucesso" });
             }
@@ -142,13 +165,18 @@ namespace LembretesApi.Controllers
             try
             {
                 var usuarioId = ObterUsuarioId();
+                _logger.LogInformation($"🧪 Iniciando teste de notificação para usuário: {usuarioId}");
 
                 // Verificar se o usuário tem subscription
-                var subscription = await _context.PushSubscriptions
-                    .FirstOrDefaultAsync(ps => ps.UsuarioId == usuarioId);
+                var subscriptions = await _context.PushSubscriptions
+                    .Where(ps => ps.UsuarioId == usuarioId)
+                    .ToListAsync();
 
-                if (subscription == null)
+                _logger.LogInformation($"📋 Encontradas {subscriptions.Count} subscription(s) para o usuário {usuarioId}");
+
+                if (!subscriptions.Any())
                 {
+                    _logger.LogWarning($"⚠️ Nenhuma subscription encontrada para o usuário {usuarioId}");
                     return BadRequest(new { 
                         message = "Você precisa ativar as notificações primeiro. Use o botão 'Ativar Notificações' no frontend." 
                     });
@@ -157,7 +185,11 @@ namespace LembretesApi.Controllers
                 var title = dto?.Title ?? "🔔 Teste de Notificação";
                 var body = dto?.Body ?? "Esta é uma notificação de teste! Se você está vendo isso, as notificações estão funcionando corretamente.";
 
+                _logger.LogInformation($"📤 Enviando notificação de teste - Título: {title}, Corpo: {body}");
+
                 await _pushService.SendNotificationAsync(usuarioId, title, body, dto?.Data);
+
+                _logger.LogInformation($"✅ Notificação de teste enviada com sucesso para o usuário {usuarioId}");
 
                 return Ok(new { 
                     message = "Notificação de teste enviada com sucesso!",
@@ -167,6 +199,7 @@ namespace LembretesApi.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                _logger.LogError(ex, $"❌ Erro de configuração ao enviar notificação de teste: {ex.Message}");
                 return StatusCode(500, new { 
                     message = "Erro de configuração", 
                     error = ex.Message,
@@ -175,6 +208,7 @@ namespace LembretesApi.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"❌ Erro ao enviar notificação de teste: {ex.Message}");
                 return StatusCode(500, new { 
                     message = "Erro ao enviar notificação de teste", 
                     error = ex.Message,
