@@ -20,68 +20,117 @@ if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar PostgreSQL
-// PRIORIDADE: Variável de ambiente primeiro (para Render), depois appsettings.json
+// Configurar PostgreSQL - Neon.tech
+// PRIORIDADE: DATABASE_URL (variável de ambiente) > appsettings.json
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Se vier do Neon.tech ou Render (formato postgresql:// ou postgres://...)
-if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://")))
+// Log informativo sobre qual fonte está sendo usada
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
+{
+    Console.WriteLine("📦 Usando DATABASE_URL do Neon.tech (variável de ambiente)");
+}
+else
+{
+    Console.WriteLine("📦 Usando connection string do appsettings.json");
+}
+
+// Processar URL do Neon.tech (formato postgresql://, postgres:// ou tcp://...)
+if (!string.IsNullOrEmpty(connectionString) && 
+    (connectionString.StartsWith("postgresql://") || 
+     connectionString.StartsWith("postgres://") ||
+     connectionString.StartsWith("tcp://")))
 {
     try
     {
-        var uri = new Uri(connectionString);
-        var userInfo = uri.UserInfo.Split(':');
-        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-        
-        // Usar porta padrão 5432 se não especificada na URL
-        var dbPort = uri.Port == -1 ? 5432 : uri.Port;
-        
-        // Extrair parâmetros de query (sslmode, channel_binding, etc.)
-        var queryParams = new List<string>();
-        if (!string.IsNullOrEmpty(uri.Query))
+        // Converter tcp:// para postgresql:// para parsing
+        var originalConnectionString = connectionString;
+        if (connectionString.StartsWith("tcp://"))
         {
-            var query = uri.Query.TrimStart('?');
-            var pairs = query.Split('&');
-            foreach (var pair in pairs)
+            connectionString = connectionString.Replace("tcp://", "postgresql://");
+        }
+        
+        var uri = new Uri(connectionString);
+        
+        // Verificar se tem credenciais na URL
+        if (string.IsNullOrEmpty(uri.UserInfo))
+        {
+            Console.WriteLine($"⚠️ DATABASE_URL não contém credenciais. Formato esperado: postgresql://user:pass@host:port/dbname");
+            Console.WriteLine($"   URL recebida: {originalConnectionString.Substring(0, Math.Min(50, originalConnectionString.Length))}...");
+            // Tentar usar a string original se já estiver no formato Npgsql
+            if (originalConnectionString.Contains("Host=") && originalConnectionString.Contains("Database="))
             {
-                var keyValue = pair.Split('=');
-                if (keyValue.Length == 2)
+                Console.WriteLine("   Usando connection string como está (formato Npgsql)");
+                connectionString = originalConnectionString;
+            }
+            else
+            {
+                throw new InvalidOperationException("DATABASE_URL não contém credenciais. Verifique a variável de ambiente DATABASE_URL.");
+            }
+        }
+        else
+        {
+            var userInfo = uri.UserInfo.Split(':');
+            var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+            var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+            
+            // Usar porta padrão 5432 se não especificada na URL
+            var dbPort = uri.Port == -1 ? 5432 : uri.Port;
+            
+            // Extrair parâmetros de query (sslmode, channel_binding, etc.)
+            var queryParams = new List<string>();
+            if (!string.IsNullOrEmpty(uri.Query))
+            {
+                var query = uri.Query.TrimStart('?');
+                var pairs = query.Split('&');
+                foreach (var pair in pairs)
                 {
-                    var paramKey = keyValue[0];
-                    var value = Uri.UnescapeDataString(keyValue[1]);
-                    
-                    // Converter parâmetros de query para formato Npgsql
-                    switch (paramKey.ToLower())
+                    var keyValue = pair.Split('=');
+                    if (keyValue.Length == 2)
                     {
-                        case "sslmode":
-                            queryParams.Add($"SSL Mode={value}");
-                            break;
-                        case "channel_binding":
-                            queryParams.Add($"Channel Binding={value}");
-                            break;
-                        default:
-                            queryParams.Add($"{paramKey}={value}");
-                            break;
+                        var paramKey = keyValue[0];
+                        var value = Uri.UnescapeDataString(keyValue[1]);
+                        
+                        // Converter parâmetros de query para formato Npgsql
+                        switch (paramKey.ToLower())
+                        {
+                            case "sslmode":
+                                queryParams.Add($"SSL Mode={value}");
+                                break;
+                            case "channel_binding":
+                                queryParams.Add($"Channel Binding={value}");
+                                break;
+                            default:
+                                queryParams.Add($"{paramKey}={value}");
+                                break;
+                        }
                     }
                 }
             }
+            
+            // Se não tiver SSL Mode na query, adicionar padrão
+            if (!queryParams.Any(p => p.StartsWith("SSL Mode", StringComparison.OrdinalIgnoreCase)))
+            {
+                queryParams.Add("SSL Mode=Require");
+                queryParams.Add("Trust Server Certificate=true");
+            }
+            
+            var queryString = string.Join(";", queryParams);
+            var database = uri.AbsolutePath.Trim('/');
+            if (string.IsNullOrEmpty(database))
+            {
+                throw new InvalidOperationException("DATABASE_URL não contém nome do banco de dados.");
+            }
+            
+            connectionString = $"Host={uri.Host};Port={dbPort};Database={database};Username={username};Password={password};{queryString}";
+            Console.WriteLine($"✅ Connection string processada com sucesso. Host: {uri.Host}, Database: {database}");
         }
-        
-        // Se não tiver SSL Mode na query, adicionar padrão
-        if (!queryParams.Any(p => p.StartsWith("SSL Mode", StringComparison.OrdinalIgnoreCase)))
-        {
-            queryParams.Add("SSL Mode=Require");
-            queryParams.Add("Trust Server Certificate=true");
-        }
-        
-        var queryString = string.Join(";", queryParams);
-        connectionString = $"Host={uri.Host};Port={dbPort};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};{queryString}";
     }
     catch (Exception ex)
     {
         // Log simples usando Console (antes do logger estar configurado)
         Console.WriteLine($"⚠️ Erro ao processar connection string: {ex.Message}");
+        Console.WriteLine($"   Stack trace: {ex.StackTrace}");
         // Não usar a original se falhou, vai lançar exceção depois
         connectionString = null;
     }
@@ -90,7 +139,14 @@ if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("pos
 // Configurar DB Context com PostgreSQL
 if (string.IsNullOrEmpty(connectionString))
 {
-    throw new InvalidOperationException("DATABASE_URL não configurada. Configure a variável de ambiente DATABASE_URL ou a connection string no appsettings.json.");
+    var hasDatabaseUrl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"));
+    var varsInfo = hasDatabaseUrl 
+        ? "Variável DATABASE_URL encontrada mas não pôde ser processada." 
+        : "Variável de ambiente DATABASE_URL não encontrada.";
+    
+    throw new InvalidOperationException(
+        $"Connection string não configurada. {varsInfo} " +
+        "Configure a variável de ambiente DATABASE_URL com a URL do Neon.tech (formato: postgresql://user:pass@host.neon.tech/dbname) ou configure no appsettings.json.");
 }
 
 // Configurar Npgsql para aceitar datas sem timezone (converte automaticamente para UTC)
