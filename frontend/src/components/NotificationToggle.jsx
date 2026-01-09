@@ -27,12 +27,29 @@ function NotificationToggle() {
       }
 
       const permission = await notificationService.getPermission()
-      const subscription = await notificationService.getSubscription()
-
-      setIsEnabled(permission === 'granted' && subscription !== null)
+      
+      // Garantir que o service worker está registrado e ativo antes de verificar subscription
+      if (permission === 'granted') {
+        try {
+          // Registrar service worker se necessário
+          await notificationService.registerServiceWorker()
+          
+          // Aguardar um pouco para garantir que está pronto
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          const subscription = await notificationService.getSubscription()
+          setIsEnabled(subscription !== null)
+        } catch (swError) {
+          console.warn('Erro ao verificar service worker:', swError)
+          setIsEnabled(false)
+        }
+      } else {
+        setIsEnabled(false)
+      }
     } catch (err) {
       console.error('Erro ao verificar status de notificações:', err)
       setError('Erro ao verificar notificações')
+      setIsEnabled(false)
     } finally {
       setIsLoading(false)
     }
@@ -98,6 +115,25 @@ function NotificationToggle() {
 
       if (!isEnabled) {
         setError('Ative as notificações primeiro antes de testar')
+        return
+      }
+
+      // Verificar se o service worker está ativo e há subscription antes de testar
+      try {
+        await notificationService.registerServiceWorker()
+        await new Promise(resolve => setTimeout(resolve, 500)) // Aguardar service worker estar pronto
+        
+        const subscription = await notificationService.getSubscription()
+        if (!subscription) {
+          setError('Subscription não encontrada. Reative as notificações.')
+          setIsEnabled(false)
+          return
+        }
+        
+        console.log('[NotificationToggle] ✅ Service Worker e subscription verificados antes do teste')
+      } catch (swError) {
+        console.error('[NotificationToggle] ❌ Erro ao verificar service worker:', swError)
+        setError('Service Worker não está pronto. Aguarde alguns segundos e tente novamente.')
         return
       }
 

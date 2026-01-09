@@ -51,16 +51,38 @@ class NotificationService {
     }
 
     try {
+      // Verificar se já existe um service worker registrado
+      const existingRegistration = await navigator.serviceWorker.getRegistration('/');
+      
+      if (existingRegistration) {
+        console.log('[NotificationService] Service Worker já registrado, reutilizando...');
+        this.registration = existingRegistration;
+        
+        // Se já está ativo, retornar imediatamente
+        if (existingRegistration.active) {
+          console.log('[NotificationService] ✅ Service Worker já está ativo');
+          return existingRegistration;
+        }
+        
+        // Caso contrário, aguardar estar ativo
+        await this.waitForServiceWorkerReady(existingRegistration);
+        return existingRegistration;
+      }
+
+      // Registrar novo service worker
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });
       
       this.registration = registration;
-      console.log('[NotificationService] Service Worker registrado:', registration);
+      console.log('[NotificationService] ✅ Service Worker registrado:', registration);
+      
+      // Aguardar estar ativo
+      await this.waitForServiceWorkerReady(registration);
       
       return registration;
     } catch (error) {
-      console.error('[NotificationService] Erro ao registrar Service Worker:', error);
+      console.error('[NotificationService] ❌ Erro ao registrar Service Worker:', error);
       throw error;
     }
   }
@@ -100,21 +122,13 @@ class NotificationService {
     }
 
     try {
+      // Aguardar o service worker estar completamente ativo
+      await this.waitForServiceWorkerReady(this.registration);
+
       // Verificar se o pushManager está disponível
       if (!this.registration.pushManager) {
         throw new Error('PushManager não está disponível. Verifique se o navegador suporta notificações push.');
       }
-
-      // Aguardar o service worker estar ativo
-      if (this.registration.waiting) {
-        await this.registration.waiting;
-      }
-      if (this.registration.installing) {
-        await this.registration.installing;
-      }
-      
-      // Aguardar um pouco mais para garantir que o service worker está pronto
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Verificar se o service worker está ativo
       if (!this.registration.active) {
@@ -193,6 +207,80 @@ class NotificationService {
     }
   }
 
+  // Aguardar service worker estar ativo
+  async waitForServiceWorkerReady(registration) {
+    if (!registration) {
+      throw new Error('Registration não disponível');
+    }
+
+    // Se já está ativo, retornar imediatamente
+    if (registration.active) {
+      console.log('[NotificationService] ✅ Service Worker já está ativo');
+      return registration;
+    }
+
+    console.log('[NotificationService] ⏳ Aguardando Service Worker estar ativo...');
+
+    // Aguardar o service worker estar ativo
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.warn('[NotificationService] ⚠️ Timeout aguardando service worker estar ativo');
+        // Mesmo com timeout, tentar retornar se estiver ativo agora
+        if (registration.active) {
+          resolve(registration);
+        } else {
+          reject(new Error('Timeout aguardando service worker estar ativo'));
+        }
+      }, 10000); // 10 segundos de timeout
+
+      const checkActive = () => {
+        if (registration.active) {
+          clearTimeout(timeout);
+          console.log('[NotificationService] ✅ Service Worker agora está ativo');
+          resolve(registration);
+          return;
+        }
+      };
+
+      // Verificar imediatamente
+      checkActive();
+
+      // Se está instalando, aguardar evento de mudança de estado
+      if (registration.installing) {
+        const installing = registration.installing;
+        installing.addEventListener('statechange', () => {
+          console.log('[NotificationService] Estado do SW instalando:', installing.state);
+          if (installing.state === 'activated' || registration.active) {
+            clearTimeout(timeout);
+            resolve(registration);
+          }
+        });
+      }
+
+      // Se está esperando, aguardar evento de mudança de estado
+      if (registration.waiting) {
+        const waiting = registration.waiting;
+        waiting.addEventListener('statechange', () => {
+          console.log('[NotificationService] Estado do SW waiting:', waiting.state);
+          if (waiting.state === 'activated' || registration.active) {
+            clearTimeout(timeout);
+            resolve(registration);
+          }
+        });
+      }
+
+      // Verificar periodicamente como fallback
+      const interval = setInterval(() => {
+        if (registration.active) {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          console.log('[NotificationService] ✅ Service Worker ativo (verificação periódica)');
+          resolve(registration);
+        }
+      }, 200);
+    });
+  }
+
   // Obter subscription atual
   async getSubscription() {
     if (!this.registration) {
@@ -200,11 +288,31 @@ class NotificationService {
     }
 
     try {
+      // Garantir que o service worker está ativo antes de tentar obter subscription
+      await this.waitForServiceWorkerReady(this.registration);
+
+      if (!this.registration.active) {
+        console.warn('[NotificationService] ⚠️ Service Worker não está ativo');
+        return null;
+      }
+
+      if (!this.registration.pushManager) {
+        console.warn('[NotificationService] ⚠️ PushManager não está disponível');
+        return null;
+      }
+
       const subscription = await this.registration.pushManager.getSubscription();
       this.subscription = subscription;
+      
+      if (subscription) {
+        console.log('[NotificationService] ✅ Subscription encontrada:', subscription.endpoint.substring(0, 50) + '...');
+      } else {
+        console.log('[NotificationService] ℹ️ Nenhuma subscription encontrada');
+      }
+      
       return subscription;
     } catch (error) {
-      console.error('[NotificationService] Erro ao obter subscription:', error);
+      console.error('[NotificationService] ❌ Erro ao obter subscription:', error);
       return null;
     }
   }
@@ -351,24 +459,8 @@ class NotificationService {
       // Registrar Service Worker
       await this.registerServiceWorker();
 
-      // Aguardar o service worker estar ativo
-      if (this.registration.waiting) {
-        await new Promise((resolve) => {
-          this.registration.waiting.addEventListener('statechange', (e) => {
-            if (e.target.state === 'activated') resolve();
-          });
-        });
-      }
-      if (this.registration.installing) {
-        await new Promise((resolve) => {
-          this.registration.installing.addEventListener('statechange', (e) => {
-            if (e.target.state === 'activated') resolve();
-          });
-        });
-      }
-      
-      // Aguardar um pouco mais para garantir que o service worker está pronto
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aguardar o service worker estar completamente ativo
+      await this.waitForServiceWorkerReady(this.registration);
 
       // Verificar se já existe subscription
       let subscription = await this.getSubscription();

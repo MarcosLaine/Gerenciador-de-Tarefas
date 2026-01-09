@@ -44,15 +44,20 @@ function App() {
               // Verificar se já tem permissão antes de inicializar
               const permission = await notificationService.getPermission()
               if (permission === 'granted') {
+                console.log('[App] Inicializando notificações...')
                 await notificationService.initialize(token)
+                console.log('[App] ✅ Notificações inicializadas com sucesso')
+              } else {
+                console.log('[App] Permissão de notificações não concedida ainda')
               }
             }
           } catch (error) {
             // Silenciosamente falhar se notificações não estiverem disponíveis
-            console.log('Notificações não inicializadas:', error.message)
+            console.warn('[App] Notificações não inicializadas:', error.message)
           }
         }
-        initNotifications()
+        // Aguardar um pouco antes de inicializar para garantir que a página carregou
+        setTimeout(initNotifications, 1000)
       }
     } else {
       setLoading(false)
