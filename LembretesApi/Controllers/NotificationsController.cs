@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using LembretesApi.Data;
 using LembretesApi.DTOs;
 using LembretesApi.Models;
@@ -16,11 +17,13 @@ namespace LembretesApi.Controllers
     {
         private readonly AppDbContext _context;
         private readonly PushNotificationService _pushService;
+        private readonly ILogger<NotificationsController> _logger;
 
-        public NotificationsController(AppDbContext context, PushNotificationService pushService)
+        public NotificationsController(AppDbContext context, PushNotificationService pushService, ILogger<NotificationsController> logger)
         {
             _context = context;
             _pushService = pushService;
+            _logger = logger;
         }
 
         private string ObterUsuarioId()
