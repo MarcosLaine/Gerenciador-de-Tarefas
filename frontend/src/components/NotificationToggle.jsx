@@ -130,10 +130,38 @@ function NotificationToggle() {
         throw new Error(errorMessage)
       }
 
-      const data = await response.json()
+      // Verificar se há conteúdo antes de tentar fazer parse do JSON
+      const contentType = response.headers.get('content-type')
+      const text = await response.text()
+      
+      if (!text || text.trim().length === 0) {
+        // Se não houver conteúdo, considerar como sucesso
+        setError(null)
+        const successMsg = '✅ Notificação de teste enviada! Verifique se apareceu no seu navegador.'
+        setError(successMsg)
+        setTimeout(() => setError(null), 5000)
+        return
+      }
+
+      // Tentar fazer parse do JSON apenas se houver conteúdo
+      let data = null
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(text)
+        } catch (parseError) {
+          console.warn('Resposta não é um JSON válido:', text)
+          // Mesmo assim, considerar como sucesso se a resposta foi OK
+          setError(null)
+          const successMsg = '✅ Notificação de teste enviada! Verifique se apareceu no seu navegador.'
+          setError(successMsg)
+          setTimeout(() => setError(null), 5000)
+          return
+        }
+      }
+
       setError(null)
       // Mostrar mensagem de sucesso temporariamente
-      const successMsg = '✅ Notificação de teste enviada! Verifique se apareceu no seu navegador.'
+      const successMsg = data?.message || '✅ Notificação de teste enviada! Verifique se apareceu no seu navegador.'
       setError(successMsg)
       setTimeout(() => setError(null), 5000)
     } catch (err) {
