@@ -1,12 +1,25 @@
 import { Lock, LogIn, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { authService } from '../services/authService'
+import { detectTimezone } from '../utils/timezone'
 
 function Login({ onLogin, onToggleMode }) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
+  const [timezone, setTimezone] = useState(null)
+
+  // Detectar timezone ao montar o componente
+  useEffect(() => {
+    detectTimezone().then(tz => {
+      setTimezone(tz)
+      console.log('[Login] Timezone detectado:', tz)
+    }).catch(err => {
+      console.warn('[Login] Erro ao detectar timezone:', err)
+      setTimezone('America/Sao_Paulo')
+    })
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -14,7 +27,7 @@ function Login({ onLogin, onToggleMode }) {
     setLoading(true)
 
     try {
-      await authService.login(email, senha)
+      await authService.login(email, senha, timezone || 'America/Sao_Paulo')
       onLogin()
     } catch (error) {
       setErro(error.message || 'Erro ao fazer login')

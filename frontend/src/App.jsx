@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import DarkModeToggle from './components/DarkModeToggle'
 import Dashboard from './components/Dashboard'
 import Login from './components/Login'
+import NotificationToggle from './components/NotificationToggle'
 import Register from './components/Register'
 import ReminderForm from './components/ReminderForm'
 import ReminderList from './components/ReminderList'
@@ -10,6 +11,7 @@ import SearchAndFilters, { filterReminders } from './components/SearchAndFilters
 import { useDarkMode } from './hooks/useDarkMode'
 import { api } from './services/api'
 import { authService } from './services/authService'
+import { notificationService } from './services/notificationService'
 
 function App() {
   const { isDarkMode, toggleDarkMode } = useDarkMode()
@@ -32,6 +34,26 @@ function App() {
       const userData = authService.getUser()
       setUser(userData)
       loadReminders()
+      
+      // Inicializar notificações se o usuário estiver autenticado
+      if ('serviceWorker' in navigator && 'Notification' in window) {
+        const initNotifications = async () => {
+          try {
+            const token = authService.getToken()
+            if (token) {
+              // Verificar se já tem permissão antes de inicializar
+              const permission = await notificationService.getPermission()
+              if (permission === 'granted') {
+                await notificationService.initialize(token)
+              }
+            }
+          } catch (error) {
+            // Silenciosamente falhar se notificações não estiverem disponíveis
+            console.log('Notificações não inicializadas:', error.message)
+          }
+        }
+        initNotifications()
+      }
     } else {
       setLoading(false)
     }
@@ -229,6 +251,7 @@ function App() {
               <span className="font-medium">Olá, {user?.nome || 'Usuário'}!</span>
             </div>
             <div className="flex items-center gap-2">
+              <NotificationToggle />
               <DarkModeToggle isDarkMode={isDarkMode} onToggle={toggleDarkMode} />
               <button
                 onClick={handleLogout}

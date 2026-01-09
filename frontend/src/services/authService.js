@@ -7,14 +7,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL
 
 export const authService = {
   // Registrar novo usuário
-  async register(nome, email, senha) {
+  async register(nome, email, senha, timezone = null) {
     try {
       const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ nome, email, senha }),
+        body: JSON.stringify({ nome, email, senha, timezone }),
       });
 
       // Verificar se a resposta tem conteúdo antes de fazer parse
@@ -50,14 +50,14 @@ export const authService = {
   },
 
   // Login do usuário
-  async login(email, senha) {
+  async login(email, senha, timezone = null) {
     try {
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, senha }),
+        body: JSON.stringify({ email, senha, timezone }),
       });
 
       // Verificar se a resposta tem conteúdo antes de fazer parse

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Linq;
@@ -8,6 +9,14 @@ using System.Text;
 using LembretesApi.Data;
 using LembretesApi.Models;
 using LembretesApi.Services;
+using DotNetEnv;
+
+// Carregar variáveis de ambiente do arquivo .env (apenas em desenvolvimento)
+if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development" && 
+    File.Exists(".env"))
+{
+    Env.Load();
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Se vier do Render (formato postgresql:// ou postgres://...)
+// Se vier do Neon.tech ou Render (formato postgresql:// ou postgres://...)
 if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://")))
 {
     try
@@ -28,12 +37,51 @@ if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("pos
         // Usar porta padrão 5432 se não especificada na URL
         var dbPort = uri.Port == -1 ? 5432 : uri.Port;
         
-        connectionString = $"Host={uri.Host};Port={dbPort};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        // Extrair parâmetros de query (sslmode, channel_binding, etc.)
+        var queryParams = new List<string>();
+        if (!string.IsNullOrEmpty(uri.Query))
+        {
+            var query = uri.Query.TrimStart('?');
+            var pairs = query.Split('&');
+            foreach (var pair in pairs)
+            {
+                var keyValue = pair.Split('=');
+                if (keyValue.Length == 2)
+                {
+                    var paramKey = keyValue[0];
+                    var value = Uri.UnescapeDataString(keyValue[1]);
+                    
+                    // Converter parâmetros de query para formato Npgsql
+                    switch (paramKey.ToLower())
+                    {
+                        case "sslmode":
+                            queryParams.Add($"SSL Mode={value}");
+                            break;
+                        case "channel_binding":
+                            queryParams.Add($"Channel Binding={value}");
+                            break;
+                        default:
+                            queryParams.Add($"{paramKey}={value}");
+                            break;
+                    }
+                }
+            }
+        }
+        
+        // Se não tiver SSL Mode na query, adicionar padrão
+        if (!queryParams.Any(p => p.StartsWith("SSL Mode", StringComparison.OrdinalIgnoreCase)))
+        {
+            queryParams.Add("SSL Mode=Require");
+            queryParams.Add("Trust Server Certificate=true");
+        }
+        
+        var queryString = string.Join(";", queryParams);
+        connectionString = $"Host={uri.Host};Port={dbPort};Database={uri.AbsolutePath.Trim('/')};Username={userInfo[0]};Password={password};{queryString}";
     }
     catch (Exception ex)
     {
-        var logger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Program");
-        logger.LogWarning(ex, "Erro ao processar connection string: {Error}", ex.Message);
+        // Log simples usando Console (antes do logger estar configurado)
+        Console.WriteLine($"⚠️ Erro ao processar connection string: {ex.Message}");
         // Não usar a original se falhou, vai lançar exceção depois
         connectionString = null;
     }
@@ -42,14 +90,17 @@ if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("pos
 // Configurar DB Context com PostgreSQL
 if (string.IsNullOrEmpty(connectionString))
 {
-    throw new InvalidOperationException("DATABASE_URL não configurada. Configure a variável de ambiente DATABASE_URL no Render.");
+    throw new InvalidOperationException("DATABASE_URL não configurada. Configure a variável de ambiente DATABASE_URL ou a connection string no appsettings.json.");
 }
 
 // Configurar Npgsql para aceitar datas sem timezone (converte automaticamente para UTC)
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+// Configurar DbContext com PostgreSQL (Neon.tech)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    options.UseNpgsql(connectionString);
+});
 
 // Configurar Identity
 builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
@@ -103,6 +154,9 @@ builder.Services.AddAuthentication(options =>
 
 // Registrar serviços
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<TimezoneService>();
+builder.Services.AddScoped<PushNotificationService>();
+builder.Services.AddHostedService<ReminderNotificationBackgroundService>();
 
 // Adiciona controllers com configuração JSON
 builder.Services.AddControllers()
@@ -189,111 +243,114 @@ using (var scope = app.Services.CreateScope())
         }
         else
         {
-            logger.LogInformation("ℹ️ Nenhuma migration pendente. Banco está atualizado.");
+            logger.LogInformation("ℹ️ Nenhuma migration pendente. Verificando se tabelas existem...");
             
             // Verifica se o banco existe e tem tabelas
-            if (!context.Database.CanConnect())
+            bool tablesExist = false;
+            try
             {
-                logger.LogWarning("⚠️ Não é possível conectar ao banco. Tentando criar...");
-                var created = context.Database.EnsureCreated();
-                if (created)
+                if (context.Database.CanConnect())
                 {
-                    logger.LogInformation("✅ Banco criado com sucesso via EnsureCreated()!");
+                    // Verifica se a tabela AspNetUsers existe (tabela principal do Identity)
+                    var connection = context.Database.GetDbConnection();
+                    if (connection.State != System.Data.ConnectionState.Open)
+                    {
+                        connection.Open();
+                    }
+                    
+                    using var command = connection.CreateCommand();
+                    command.CommandText = @"
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.tables 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'AspNetUsers'
+                        );
+                    ";
+                    var result = command.ExecuteScalar();
+                    tablesExist = result != null && Convert.ToBoolean(result);
+                    
+                    if (connection.State == System.Data.ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
                 }
             }
-        }
-        
-        // Verifica e adiciona colunas se não existirem
-        try
-        {
-            logger.LogInformation("🔍 Verificando se colunas existem...");
-            
-            // Verificar e adicionar Horario
-            var checkHorarioSql = @"
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'Lembretes' AND column_name = 'Horario'";
-            
-            var horarioExists = context.Database.SqlQueryRaw<string>(checkHorarioSql).Any();
-            
-            if (!horarioExists)
+            catch (Exception checkEx)
             {
-                logger.LogWarning("⚠️ Coluna Horario não encontrada. Criando...");
-                var addHorarioSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Horario"" interval NULL";
-                context.Database.ExecuteSqlRaw(addHorarioSql);
-                logger.LogInformation("✅ Coluna Horario adicionada com sucesso!");
+                logger.LogWarning(checkEx, "⚠️ Erro ao verificar tabelas: {Error}", checkEx.Message);
             }
             
-            // Verificar e adicionar Descricao
-            var checkDescricaoSql = @"
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'Lembretes' AND column_name = 'Descricao'";
-            
-            var descricaoExists = context.Database.SqlQueryRaw<string>(checkDescricaoSql).Any();
-            
-            if (!descricaoExists)
+            if (!tablesExist)
             {
-                logger.LogWarning("⚠️ Coluna Descricao não encontrada. Criando...");
-                var addDescricaoSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Descricao"" text NULL";
-                context.Database.ExecuteSqlRaw(addDescricaoSql);
-                logger.LogInformation("✅ Coluna Descricao adicionada com sucesso!");
+                logger.LogWarning("⚠️ Tabelas não existem. Criando banco de dados...");
+                try
+                {
+                    var created = context.Database.EnsureCreated();
+                    if (created)
+                    {
+                        logger.LogInformation("✅ Banco criado com sucesso via EnsureCreated()!");
+                    }
+                    else
+                    {
+                        logger.LogInformation("ℹ️ EnsureCreated retornou false - tabelas podem já existir");
+                    }
+                }
+                catch (Exception createEx)
+                {
+                    logger.LogError(createEx, "❌ Erro ao criar banco: {Error}", createEx.Message);
+                    throw;
+                }
             }
-            
-            // Verificar e adicionar Concluido
-            var checkConcluidoSql = @"
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'Lembretes' AND column_name = 'Concluido'";
-            
-            var concluidoExists = context.Database.SqlQueryRaw<string>(checkConcluidoSql).Any();
-            
-            if (!concluidoExists)
+            else
             {
-                logger.LogWarning("⚠️ Coluna Concluido não encontrada. Criando...");
-                var addConcluidoSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Concluido"" boolean NOT NULL DEFAULT false";
-                context.Database.ExecuteSqlRaw(addConcluidoSql);
-                logger.LogInformation("✅ Coluna Concluido adicionada com sucesso!");
+                logger.LogInformation("✅ Tabelas existem. Verificando se coluna Timezone existe...");
+                
+                // Verificar e adicionar coluna Timezone se não existir
+                try
+                {
+                    var connection = context.Database.GetDbConnection();
+                    if (connection.State != System.Data.ConnectionState.Open)
+                    {
+                        connection.Open();
+                    }
+                    
+                    using var checkColumnCommand = connection.CreateCommand();
+                    checkColumnCommand.CommandText = @"
+                        SELECT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'AspNetUsers'
+                            AND column_name = 'Timezone'
+                        );
+                    ";
+                    var columnExists = Convert.ToBoolean(checkColumnCommand.ExecuteScalar());
+                    
+                    if (!columnExists)
+                    {
+                        logger.LogInformation("📝 Adicionando coluna Timezone à tabela AspNetUsers...");
+                        using var addColumnCommand = connection.CreateCommand();
+                        addColumnCommand.CommandText = @"
+                            ALTER TABLE ""AspNetUsers""
+                            ADD COLUMN ""Timezone"" TEXT NOT NULL DEFAULT 'America/Sao_Paulo';
+                        ";
+                        addColumnCommand.ExecuteNonQuery();
+                        logger.LogInformation("✅ Coluna Timezone adicionada com sucesso!");
+                    }
+                    else
+                    {
+                        logger.LogInformation("✅ Coluna Timezone já existe.");
+                    }
+                    
+                    if (connection.State == System.Data.ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch (Exception columnEx)
+                {
+                    logger.LogWarning(columnEx, "⚠️ Erro ao verificar/adicionar coluna Timezone: {Error}", columnEx.Message);
+                }
             }
-            
-            // Verificar e adicionar Categoria
-            var checkCategoriaSql = @"
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'Lembretes' AND column_name = 'Categoria'";
-            
-            var categoriaExists = context.Database.SqlQueryRaw<string>(checkCategoriaSql).Any();
-            
-            if (!categoriaExists)
-            {
-                logger.LogWarning("⚠️ Coluna Categoria não encontrada. Criando...");
-                var addCategoriaSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Categoria"" text NULL";
-                context.Database.ExecuteSqlRaw(addCategoriaSql);
-                logger.LogInformation("✅ Coluna Categoria adicionada com sucesso!");
-            }
-            
-            // Verificar e adicionar Recorrencia
-            var checkRecorrenciaSql = @"
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'Lembretes' AND column_name = 'Recorrencia'";
-            
-            var recorrenciaExists = context.Database.SqlQueryRaw<string>(checkRecorrenciaSql).Any();
-            
-            if (!recorrenciaExists)
-            {
-                logger.LogWarning("⚠️ Coluna Recorrencia não encontrada. Criando...");
-                var addRecorrenciaSql = @"ALTER TABLE ""Lembretes"" ADD COLUMN ""Recorrencia"" text NULL";
-                context.Database.ExecuteSqlRaw(addRecorrenciaSql);
-                logger.LogInformation("✅ Coluna Recorrencia adicionada com sucesso!");
-            }
-            
-            logger.LogInformation("✅ Todas as colunas verificadas/criadas.");
-        }
-        catch (Exception colEx)
-        {
-            logger.LogError(colEx, "❌ Erro ao verificar/criar colunas: {Error}", colEx.Message);
-            // Não lança exceção, apenas loga o erro
         }
     }
     catch (Exception ex)
@@ -317,6 +374,28 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Middleware de tratamento de erros para retornar JSON
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+
+        var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        var exception = exceptionHandlerPathFeature?.Error;
+
+        var errorResponse = new
+        {
+            message = "Erro interno do servidor",
+            error = exception?.Message,
+            details = app.Environment.IsDevelopment() ? exception?.ToString() : null
+        };
+
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(errorResponse));
+    });
+});
 
 // CORS deve vir antes de Authentication e Authorization
 app.UseCors("AllowAll");

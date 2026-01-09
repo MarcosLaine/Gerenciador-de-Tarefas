@@ -1,0 +1,11 @@
+{
+  "name": "Sistema de Lembretes",
+  "short_name": "Lembretes",
+  "description": "Gerencie seus lembretes de forma elegante e eficiente",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": []
+}

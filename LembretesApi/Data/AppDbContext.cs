@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using LembretesApi.Models;
 
 namespace LembretesApi.Data
@@ -11,17 +12,21 @@ namespace LembretesApi.Data
         }
 
         public DbSet<Lembrete> Lembretes { get; set; }
+        public DbSet<PushSubscription> PushSubscriptions { get; set; }
 
         // Converte todas as datas para UTC antes de salvar no PostgreSQL
+        // CrateDB não suporta transações, então não usamos Database.BeginTransaction
         public override int SaveChanges()
         {
             ConvertDatesToUtc();
+            // Não usar transações para CrateDB
             return base.SaveChanges();
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             ConvertDatesToUtc();
+            // Não usar transações para CrateDB
             return base.SaveChangesAsync(cancellationToken);
         }
 
@@ -66,12 +71,29 @@ namespace LembretesApi.Data
                 .HasForeignKey(l => l.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Configurar Horario como interval (PostgreSQL nativo)
+            // Neon.tech suporta o tipo interval padrão do PostgreSQL
+            builder.Entity<Lembrete>()
+                .Property(l => l.Horario)
+                .HasColumnType("interval");
+
             // Índices para melhor performance
             builder.Entity<Lembrete>()
                 .HasIndex(l => l.UsuarioId);
 
             builder.Entity<Lembrete>()
                 .HasIndex(l => l.Data);
+
+            // Configurar relacionamento Usuario -> PushSubscriptions
+            builder.Entity<PushSubscription>()
+                .HasOne(ps => ps.Usuario)
+                .WithMany()
+                .HasForeignKey(ps => ps.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Índice para melhor performance
+            builder.Entity<PushSubscription>()
+                .HasIndex(ps => ps.UsuarioId);
         }
     }
 }

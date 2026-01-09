@@ -14,6 +14,8 @@ namespace LembretesApi.DTOs
         [Required(ErrorMessage = "Senha é obrigatória")]
         [MinLength(6, ErrorMessage = "Senha deve ter no mínimo 6 caracteres")]
         public string Senha { get; set; } = string.Empty;
+
+        public string? Timezone { get; set; } // Timezone do usuário (opcional, padrão: America/Sao_Paulo)
     }
 }
 

@@ -10,6 +10,8 @@ namespace LembretesApi.DTOs
 
         [Required(ErrorMessage = "Senha é obrigatória")]
         public string Senha { get; set; } = string.Empty;
+
+        public string? Timezone { get; set; } // Timezone do usuário (opcional, usado para atualizar se mudou)
     }
 }
 

@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LembretesApi.Data;
 using LembretesApi.Models;
 using LembretesApi.DTOs;
+using LembretesApi.Services;
 using System.Security.Claims;
 
 namespace LembretesApi.Controllers
@@ -14,10 +16,14 @@ namespace LembretesApi.Controllers
     public class LembretesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly UserManager<Usuario> _userManager;
+        private readonly TimezoneService _timezoneService;
 
-        public LembretesController(AppDbContext context)
+        public LembretesController(AppDbContext context, UserManager<Usuario> userManager, TimezoneService timezoneService)
         {
             _context = context;
+            _userManager = userManager;
+            _timezoneService = timezoneService;
         }
 
         private string ObterUsuarioId()
@@ -69,6 +75,10 @@ namespace LembretesApi.Controllers
             {
                 var usuarioId = ObterUsuarioId();
                 
+                // Buscar usuário para obter timezone
+                var usuario = await _userManager.FindByIdAsync(usuarioId);
+                var userTimezone = usuario?.Timezone ?? "America/Sao_Paulo";
+                
                 // Converter horário de string para TimeSpan se fornecido
                 TimeSpan? horarioTimeSpan = null;
                 if (!string.IsNullOrEmpty(dto.Horario))
@@ -104,10 +114,10 @@ namespace LembretesApi.Controllers
                 // Se tem horário, combina data + horário
                 if (horarioTimeSpan.HasValue)
                 {
-                    // Combinar data com horário especificado
+                    // Combinar data com horário especificado no timezone do usuário
                     var dataComHorario = dataBase.Add(horarioTimeSpan.Value);
                     
-                    // Tratar como local e converter para UTC
+                    // Criar DateTime no timezone do usuário
                     var localDate = new DateTime(
                         dataComHorario.Year,
                         dataComHorario.Month,
@@ -115,23 +125,25 @@ namespace LembretesApi.Controllers
                         dataComHorario.Hour,
                         dataComHorario.Minute,
                         dataComHorario.Second,
-                        DateTimeKind.Local
+                        DateTimeKind.Unspecified
                     );
                     
-                    dataProcessada = localDate.ToUniversalTime();
+                    // Converter do timezone do usuário para UTC
+                    dataProcessada = _timezoneService.ConvertToUtc(localDate, userTimezone);
                 }
                 else
                 {
-                    // Sem horário: usar meio-dia local para evitar problemas de timezone
+                    // Sem horário: usar meio-dia no timezone do usuário
                     var localDate = new DateTime(
                         dataBase.Year,
                         dataBase.Month,
                         dataBase.Day,
-                        12, 0, 0, // Meio-dia local
-                        DateTimeKind.Local
+                        12, 0, 0, // Meio-dia no timezone do usuário
+                        DateTimeKind.Unspecified
                     );
                     
-                    dataProcessada = localDate.ToUniversalTime();
+                    // Converter do timezone do usuário para UTC
+                    dataProcessada = _timezoneService.ConvertToUtc(localDate, userTimezone);
                 }
                 
                 // Função auxiliar para criar um lembrete
@@ -380,6 +392,10 @@ namespace LembretesApi.Controllers
                     return NotFound(new { message = "Lembrete não encontrado" });
                 }
 
+                // Buscar usuário para obter timezone
+                var usuario = await _userManager.FindByIdAsync(usuarioId);
+                var userTimezone = usuario?.Timezone ?? "America/Sao_Paulo";
+
                 // Converter horário de string para TimeSpan se fornecido (mesmo processo do Create)
                 TimeSpan? horarioTimeSpanUpdate = null;
                 if (!string.IsNullOrEmpty(dto.Horario))
@@ -412,7 +428,10 @@ namespace LembretesApi.Controllers
                 
                 if (horarioTimeSpanUpdate.HasValue)
                 {
+                    // Combinar data com horário especificado no timezone do usuário
                     var dataComHorario = dataBaseUpdate.Add(horarioTimeSpanUpdate.Value);
+                    
+                    // Criar DateTime no timezone do usuário
                     var localDate = new DateTime(
                         dataComHorario.Year,
                         dataComHorario.Month,
@@ -420,20 +439,25 @@ namespace LembretesApi.Controllers
                         dataComHorario.Hour,
                         dataComHorario.Minute,
                         dataComHorario.Second,
-                        DateTimeKind.Local
+                        DateTimeKind.Unspecified
                     );
-                    dataProcessadaUpdate = localDate.ToUniversalTime();
+                    
+                    // Converter do timezone do usuário para UTC
+                    dataProcessadaUpdate = _timezoneService.ConvertToUtc(localDate, userTimezone);
                 }
                 else
                 {
+                    // Sem horário: usar meio-dia no timezone do usuário
                     var localDate = new DateTime(
                         dataBaseUpdate.Year,
                         dataBaseUpdate.Month,
                         dataBaseUpdate.Day,
-                        12, 0, 0,
-                        DateTimeKind.Local
+                        12, 0, 0, // Meio-dia no timezone do usuário
+                        DateTimeKind.Unspecified
                     );
-                    dataProcessadaUpdate = localDate.ToUniversalTime();
+                    
+                    // Converter do timezone do usuário para UTC
+                    dataProcessadaUpdate = _timezoneService.ConvertToUtc(localDate, userTimezone);
                 }
 
                 // Atualizar campos

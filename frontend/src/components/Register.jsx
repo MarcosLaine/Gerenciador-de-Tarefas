@@ -1,6 +1,7 @@
 import { Lock, Mail, User, UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { authService } from '../services/authService'
+import { detectTimezone } from '../utils/timezone'
 
 function Register({ onRegister, onToggleMode }) {
   const [nome, setNome] = useState('')
@@ -9,6 +10,18 @@ function Register({ onRegister, onToggleMode }) {
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
+  const [timezone, setTimezone] = useState(null)
+
+  // Detectar timezone ao montar o componente
+  useEffect(() => {
+    detectTimezone().then(tz => {
+      setTimezone(tz)
+      console.log('[Register] Timezone detectado:', tz)
+    }).catch(err => {
+      console.warn('[Register] Erro ao detectar timezone:', err)
+      setTimezone('America/Sao_Paulo')
+    })
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,7 +40,7 @@ function Register({ onRegister, onToggleMode }) {
     setLoading(true)
 
     try {
-      await authService.register(nome, email, senha)
+      await authService.register(nome, email, senha, timezone || 'America/Sao_Paulo')
       onRegister()
     } catch (error) {
       setErro(error.message || 'Erro ao criar conta')

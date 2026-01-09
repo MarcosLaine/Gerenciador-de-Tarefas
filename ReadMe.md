@@ -34,18 +34,23 @@ Sistema moderno e intuitivo para gerenciamento de lembretes e tarefas, desenvolv
 
 ## 🛠️ Instalação e Execução
 
-### Opção 1: Setup Automatizado (Recomendado)
+### ⚡ Início Rápido (Recomendado)
 
-**Windows:**
+Execute tudo com um único comando:
+
 ```bash
-setup.bat
+# Instalar todas as dependências
+npm run install:all
+
+# Rodar frontend e backend simultaneamente
+npm run dev
+# ou
+yarn dev
 ```
 
-**Linux/Mac:**
-```bash
-chmod +x setup.sh
-./setup.sh
-```
+Isso iniciará:
+- **Backend** em `http://localhost:5285`
+- **Frontend** em `http://localhost:3000`
 
 ### Opção 2: Setup Manual
 
@@ -56,30 +61,40 @@ git clone <https://github.com/marcoslaine/gerenciador-de-tarefas.git>
 cd Gerenciador-de-Tarefas
 ```
 
-#### 2. Configure e inicie o Backend (API)
+#### 2. Instale as dependências
+
+```bash
+# Na raiz do projeto
+npm install
+
+# No frontend
+cd frontend
+npm install
+```
+
+#### 3. Configure e inicie o Backend (API)
 
 ```bash
 cd LembretesApi
 dotnet restore
 dotnet build
-dotnet run
+dotnet watch run
 ```
 
 A API estará rodando em `http://localhost:5285`
 
-#### 3. Configure e inicie o Frontend React
+#### 4. Configure e inicie o Frontend React
 
 Em outro terminal:
 
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
 O frontend estará disponível em `http://localhost:3000`
 
-#### 4. Acesse a aplicação
+#### 5. Acesse a aplicação
 
 Abra seu navegador e acesse: **http://localhost:3000**
 
@@ -181,8 +196,22 @@ public class Lembrete
 
 ## 🧪 Scripts Disponíveis
 
+### Scripts da Raiz (Rodam tudo junto)
+
+```bash
+npm run dev              # Roda frontend e backend simultaneamente
+npm run dev:backend      # Roda apenas o backend
+npm run dev:frontend     # Roda apenas o frontend
+npm run build            # Build de frontend e backend
+npm run build:backend    # Build apenas do backend
+npm run build:frontend   # Build apenas do frontend
+npm run install:all      # Instala dependências da raiz e do frontend
+npm run clean            # Limpa arquivos de build
+```
+
 ### Frontend
 ```bash
+cd frontend
 npm run dev      # Inicia o servidor de desenvolvimento
 npm run build    # Build para produção
 npm run preview  # Preview do build de produção
@@ -191,6 +220,7 @@ npm run lint     # Executa o linter
 
 ### Backend
 ```bash
+cd LembretesApi
 dotnet run       # Inicia o servidor
 dotnet build     # Compila o projeto
 dotnet watch run # Inicia com hot reload

@@ -44,7 +44,8 @@ namespace LembretesApi.Controllers
                     Nome = dto.Nome,
                     UserName = dto.Email,
                     Email = dto.Email,
-                    DataCriacao = DateTime.UtcNow
+                    DataCriacao = DateTime.UtcNow,
+                    Timezone = !string.IsNullOrEmpty(dto.Timezone) ? dto.Timezone : "America/Sao_Paulo"
                 };
 
                 var result = await _userManager.CreateAsync(usuario, dto.Senha);
@@ -94,6 +95,13 @@ namespace LembretesApi.Controllers
 
                 if (!result.Succeeded)
                     return Unauthorized(new { message = "Email ou senha inválidos" });
+
+                // Atualizar timezone se fornecido e diferente do atual
+                if (!string.IsNullOrEmpty(dto.Timezone) && usuario.Timezone != dto.Timezone)
+                {
+                    usuario.Timezone = dto.Timezone;
+                    await _userManager.UpdateAsync(usuario);
+                }
 
                 var token = _tokenService.GerarToken(usuario);
 
